@@ -303,6 +303,7 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	Pad1->SetLeftMargin(0.15);
 	Pad1->SetRightMargin(0.05);
 	Pad1->SetBottomMargin(0);
+	if(plot.log) Pad1->SetLogy();
 	Pad1->Draw();
 	Pad1->cd();
 	CMS_lumi(Pad1,2,0);
@@ -343,7 +344,7 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 //	}
 	data->Draw("Esame");
 	data->Draw("axissame");
-	data->SetMinimum(1.001);
+	data->SetMinimum(0.001);
 	histos.push_back(total);
 	samples.push_back( sample("Bkg uncertainty",0,"")); //dummy sample for bkg uncertainty in legend
 	TLegend* legend = createLegend(data,histos,samples);

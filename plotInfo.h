@@ -11,12 +11,12 @@
 struct plotInfo{
 	TString identifier;
 	TString unit;
+	bool log;
 	unsigned rebin;
 	double xRangeLow;
 	double xRangeHigh;
 
 	/* ideas for further members:
-	bool log;
 	double yRangeLow;
 	double yRangeHigh;
 	int nLegColumn; //number of columns in legend
@@ -28,9 +28,10 @@ struct plotInfo{
 	// default constructor
 	plotInfo() {};
 	// main constructor
-	plotInfo(TString Identifier, TString Unit, int Rebin = 1, double XRangeLow = -9.9, double XRangeHigh = -9.9){
+	plotInfo(TString Identifier, TString Unit, bool Log = false, int Rebin = 1, double XRangeLow = -9.9, double XRangeHigh = -9.9){
 		identifier = Identifier;
 		unit = Unit;
+		log = Log;
 		rebin = Rebin;
 		xRangeLow = XRangeLow;
 		xRangeHigh = XRangeHigh;

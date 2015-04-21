@@ -1,4 +1,4 @@
-#ifndef defineSamplesAndPlots_h
+#ifndef defineSamplesAnsdPlots_h
 #define defineSamplesAndPlots_h
 
 /////////////////////////////////////////////////
@@ -20,7 +20,7 @@ std::vector<sample> defineSamples(){
 	sample s_vbfHiggs	("H_{VBF}"				, 633, "MC_VBFHTauTauM125");
 	sample s_apHiggs	("H_{AP}"				, 634, "MC_WHZHTTHTauTauM125");
 	sample s_qcd		("QCD"					, col_htt_qcd, "QCD");
-	sample s_ztt		("Z#rightarrow#tau#tau"	, col_htt_Ztt, "MC_DY_tautau");
+	sample s_ztt		("Z#rightarrow#tau#tau"	, col_htt_Ztt, "MC_DY_embedded"); //"MC_DY_tautau");
 	sample s_zll		("Z#rightarrowll"		, col_rwth_lightblue, "MC_DY_ll");
 	sample s_ww			("WW"					, 417, "MC_WW_2l2nu");
 	sample s_wz2l2q		("WZ#rightarrowllqq"	, 418, "MC_WZ_2l2q");
@@ -45,6 +45,8 @@ std::vector<sample> defineSamples(){
 	sample s_higgs(s_ggHiggs, "H", 630);
 	s_higgs += s_vbfHiggs;
 	s_higgs += s_apHiggs;
+	sample s_dy(s_ztt, "DY", col_htt_Ztt);
+	s_dy += s_zll;
 	sample s_ewk(s_ww, "electroweak", col_htt_W);
 	s_ewk += s_wz2l2q;
 	s_ewk += s_wz3l1nu;
@@ -63,8 +65,7 @@ std::vector<sample> defineSamples(){
 	samples.push_back(s_qcd);
 	samples.push_back(s_top);
 	samples.push_back(s_ewk);
-	samples.push_back(s_zll);
-	samples.push_back(s_ztt);
+	samples.push_back(s_dy);
 	samples.push_back(s_higgs);
 
 	if (verbose){
@@ -82,11 +83,21 @@ std::vector<sample> defineSamples(){
 // look at plotInfo.h to see which constructors exist
 std::vector<plotInfo> definePlots(){
 	std::vector<plotInfo> plots;
-	plots.push_back( plotInfo("CatFired", "") );
-	plots.push_back( plotInfo("MuPt", "GeV") );
-	plots.push_back( plotInfo("Cut_10_Nminus1_MT_", "GeV") );
-	plots.push_back( plotInfo("MtAfterOppCharge", "GeV", 2) );
-	plots.push_back( plotInfo("MetPt", "GeV", 1, 0., 80.));
+	//plots.push_back( plotInfo("HiggsGenMass", "GeV", true, 1, 108, 112));
+//	plots.push_back( plotInfo("DataMCType", "", true, 1, 11010., 16013.));
+//	plots.push_back( plotInfo("DataMCTypeFromNtuple", "", true, 1, 0., 20000.));
+//	plots.push_back( plotInfo("visibleMass", "GeV", false, 1));
+//	plots.push_back( plotInfo("CatFired", "") );
+//	plots.push_back( plotInfo("MuPt", "GeV") );
+//	plots.push_back( plotInfo("Cut_10_Nminus1_MT_", "GeV") );
+//	plots.push_back( plotInfo("MtAfterOppCharge", "GeV", false, 2) );
+//	plots.push_back( plotInfo("MetPt", "GeV", false, 1, 0., 80.));
+//
+//	plots.push_back( plotInfo("HiggsPt", "GeV") );
+//	plots.push_back( plotInfo("HiggsPhi", "GeV") );
+//	plots.push_back( plotInfo("TauSelEta", "GeV") );
+//	plots.push_back( plotInfo("VtxRho", "", true, 1, 0., 1.) );
+//	plots.push_back( plotInfo("VtxZ", "") );
 
 	return plots;
 }
