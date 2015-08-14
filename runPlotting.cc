@@ -58,8 +58,8 @@ void runPlotting(){
 		}
 	}
 
-	// convert all created eps files into pdf
-	std::cout << "Plots created. Convert all eps into pdf..." << std::endl;
-	system("for i in `ls -1 *.eps`; do epstopdf $i; done");
+	std::cout << "Plots created." << std::endl;
+
+	convertAllEpsToPdf();
 }
 

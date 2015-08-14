@@ -11,6 +11,7 @@
 #include <vector>
 #include "TMath.h"
 #include "THStack.h"
+#include "TSystem.h"
 
 // include struct definitions
 #include "sample.h"
@@ -242,6 +243,72 @@ TLegend* createLegend(TH1D* data, std::vector<TH1D*> histos, std::vector<sample>
 	return legend;
 }
 
+
+// get a TString from the current time
+// stolen from http://www.cplusplus.com/reference/ctime/strftime/
+static TString timeNow = "";
+TString timeStamp(bool Date, bool Time){
+	// use same timestamp for all plots
+	if (timeNow != "")
+		return timeNow;
+
+	if (!Date && !Time){
+		return "";
+	}
+
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer [80];
+
+	time (&rawtime);
+	timeinfo = localtime (&rawtime);
+
+	// output pattern
+	TString pattern = "";
+	if (Date)			pattern += "%F";
+	if (Date && Time)	pattern += "_";
+	if (Time) 			pattern += "%H-%M";
+
+	strftime (buffer,80,pattern.Data(),timeinfo);
+	timeNow = TString(buffer);
+	return timeNow;
+}
+
+void savePlot(TCanvas* canvas, TString plotName, bool useTimedFolders = true){
+	TString fileName = plotName + ".eps";
+
+	// store plots in individual folder
+	TString pwd = gSystem->WorkingDirectory();
+	if (useTimedFolders){
+		TString dirName = timeStamp(true, true);
+		if (not gSystem->ChangeDirectory(dirName)){
+			gSystem->MakeDirectory(dirName);
+			gSystem->ChangeDirectory(dirName);
+		}
+	}
+
+	canvas->cd();
+	canvas->SaveAs(fileName.Data());
+
+	if (useTimedFolders){
+		gSystem->ChangeDirectory(pwd);
+	}
+}
+
+void convertAllEpsToPdf(){
+	std::cout << "Convert all eps into pdf..." << std::endl;
+
+	const char* pwd = gSystem->pwd();
+	if (timeNow != ""){
+		gSystem->ChangeDirectory(timeNow);
+		std::cout << "Plots are saved in folder " << timeNow << std::endl;
+	}
+
+	gSystem->Exec("for i in `ls -1 *.eps`; do epstopdf $i; done");
+
+	gSystem->ChangeDirectory(pwd);
+}
+
 //todo: Should be fine as is. But doesn't compile yet. Adapt.
 /*
 void drawDataOnlyPlot(TH1D* data, TString name, TString title, TString unit){
@@ -394,9 +461,7 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	can->SetWindowSize(800,800);
 	CMS_lumi(Pad1,2,0);
 	
-	//todo: safe plot in a nice way
-	TString filename = plot.identifier + ".eps";
-	can->SaveAs(filename.Data());
+	savePlot(can, plot.identifier);
 }
 
 //todo: needs more reasonable name like "drawHistoComparison". Needs adaption?
