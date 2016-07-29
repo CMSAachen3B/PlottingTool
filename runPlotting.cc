@@ -26,7 +26,8 @@ void runPlotting(){
 	gROOT->LoadMacro("tdrstyle.C");
 	setTDRStyle();
 	gROOT->LoadMacro("CMS_lumi.C");
-	writeExtraText = true;
+	cmsText = "";
+	writeExtraText = false;
 	gStyle->SetOptStat(0);
 
 	// define which samples to use

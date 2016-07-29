@@ -85,21 +85,24 @@ std::vector<sample> defineSamples(){
 // look at plotInfo.h to see which constructors exist
 std::vector<plotInfo> definePlots(){
 	std::vector<plotInfo> plots;
-	//plots.push_back( plotInfo("HiggsGenMass", "GeV", true, 1, 108, 112));
-//	plots.push_back( plotInfo("DataMCType", "", true, 1, 11010., 16013.));
-//	plots.push_back( plotInfo("DataMCTypeFromNtuple", "", true, 1, 0., 20000.));
-//	plots.push_back( plotInfo("visibleMass", "GeV", false, 1));
-//	plots.push_back( plotInfo("CatFired", "") );
-//	plots.push_back( plotInfo("MuPt", "GeV") );
-//	plots.push_back( plotInfo("Cut_10_Nminus1_MT_", "GeV") );
-//	plots.push_back( plotInfo("MtAfterOppCharge", "GeV", false, 2) );
-//	plots.push_back( plotInfo("MetPt", "GeV", false, 1, 0., 80.));
-//
-//	plots.push_back( plotInfo("HiggsPt", "GeV") );
-//	plots.push_back( plotInfo("HiggsPhi", "GeV") );
-//	plots.push_back( plotInfo("TauSelEta", "GeV") );
-//	plots.push_back( plotInfo("VtxRho", "", true, 1, 0., 1.) );
-//	plots.push_back( plotInfo("VtxZ", "") );
+
+	plots.push_back( plotInfo("Cut_10_Nminus1_MT_", "GeV", false, 2, 0., 140.) );
+	plots.push_back( plotInfo("TauSelPt", "GeV", true, 2, 20, 100) );
+	plots.push_back( plotInfo("TauSelEta", "", false, 2, -2.3, 2.3) );
+
+	plotInfo muSelPt("MuSelPt", "GeV", true, 2, 20, 100);
+	muSelPt.yRangeHigh = 2e6;
+	muSelPt.yRangeLow = 5;
+	plots.push_back( muSelPt );
+
+	plots.push_back( plotInfo("MuSelEta", "", false, 2, -2.1, 2.1) );
+	plots.push_back( plotInfo("MetPt", "GeV", true, 2) );
+	plots.push_back( plotInfo("MetPhi", "GeV", false, 2) );
+	plots.push_back( plotInfo("visibleMass", "GeV", false, 2, 0., 140.) );
+	plots.push_back( plotInfo("NJetsId", "", true, 1, -0.5, 7.5) );
+	plots.push_back( plotInfo("JetsDEta", "", false, 2, -8.0, 8.0) );
+	plots.push_back( plotInfo("JetsInvM", "GeV", true, 2, 0, 1400) );
+	plots.push_back( plotInfo("HiggsPt", "GeV", true, 2) );
 
 	return plots;
 }
