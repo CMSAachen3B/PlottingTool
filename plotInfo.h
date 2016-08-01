@@ -15,10 +15,10 @@ struct plotInfo{
 	unsigned rebin;
 	double xRangeLow;
 	double xRangeHigh;
-
-	/* ideas for further members:
 	double yRangeLow;
 	double yRangeHigh;
+
+	/* ideas for further members:
 	int nLegColumn; //number of columns in legend
 	double xLegPos; //position of legend
 	double yLegPos;
@@ -35,6 +35,10 @@ struct plotInfo{
 		rebin = Rebin;
 		xRangeLow = XRangeLow;
 		xRangeHigh = XRangeHigh;
+
+		// members set to default values have to be set manually
+		yRangeLow = -9;
+		yRangeHigh = -9;
 	}
 };
 

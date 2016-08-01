@@ -19,6 +19,10 @@
 #include "configInfo.h"
 #include "userConfig.h"
 
+// some global settings
+int errorBandFillStyle = 3013;
+int errorBandColor = kGray + 2;
+
 // test definiton of structs
 void testInputs(configInfo config, std::vector<sample> samples, std::vector<plotInfo> plots){
 	bool isValid = true;
@@ -167,8 +171,8 @@ TH1D* produceTotal(std::vector<TH1D*> histos){
 	for(unsigned i=0;i<histos.size();i++){
 		total->Add(histos.at(i));
 	}
-	total->SetFillStyle(3013);
-	total->SetFillColor(kGray+1);
+	total->SetFillStyle(errorBandFillStyle);
+	total->SetFillColor(errorBandColor);
 	total->SetLineColor(18);
 	total->SetMarkerColor(1);
 	total->SetMarkerSize(0.001);
@@ -344,43 +348,64 @@ void drawDataOnlyPlot(TH1D* data, TString name, TString title, TString unit){
 }
 */
 
-void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> samples, TString title = ""){
+void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> samples){
 	if(verbose) std::cout << "--> drawPlot(configInfo, plotInfo, TH1D*, vector<sample>, TString)" << std::endl;
-	// todo: why is this set here??
+
+	// Set tick marks on all 4 sides of pad
 	gStyle->SetPadTickX(1);
 	gStyle->SetPadTickY(1);
 	gStyle->SetPalette(1);
 	gROOT->ForceStyle(true);
 
+	// read histograms from input file
 	std::vector<TH1D*> histos = getHistos(conf, plot, samples);
 	TH1D* ratio = getDataMC(data,histos);
 
 	//get correct xAxis range
 	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : data->GetXaxis()->GetXmin();
 	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : data->GetXaxis()->GetXmax();
-	int nBins = data->GetXaxis()->FindBin(xHigh) - data->GetXaxis()->FindBin(xLow);
 
 	TCanvas* can = new TCanvas();
 	//todo: make sure that signal is only stacked if wanted
 	THStack* stack = produceHistStack(histos);
 	TH1D* total = produceTotal(histos);
-	TLine* line = new TLine(xLow,1,xHigh,1);
 	TPad* Pad1 = new TPad("Pad1","Pad1",0.,0.3,1.,1.);
 	Pad1->SetTopMargin(0.07);
 	Pad1->SetLeftMargin(0.15);
 	Pad1->SetRightMargin(0.05);
 	Pad1->SetBottomMargin(0);
-	if(plot.log) Pad1->SetLogy();
+
+	double yAxisScaleFactor = 1.5; // for linear y-axis
+	if(plot.log){
+		Pad1->SetLogy();
+		yAxisScaleFactor = 100; // for log y-axis
+	}
+
 	Pad1->Draw();
 	Pad1->cd();
 	CMS_lumi(Pad1,2,0);
 	Pad1->Update();
 
-	if(data->GetMaximum()>=total->GetMaximum()){
-		data->GetYaxis()->SetRangeUser(0,data->GetMaximum()*1.2);
-	}else{
-		data->GetYaxis()->SetRangeUser(0,total->GetMaximum()*1.2);
+	if (plot.yRangeHigh >= 0){
+		data->SetMaximum(plot.yRangeHigh);
 	}
+	else {
+		// set default values
+		if(data->GetMaximum()>=total->GetMaximum()){
+			data->SetMaximum(data->GetMaximum()*yAxisScaleFactor);
+		}else{
+			data->SetMaximum(total->GetMaximum()*yAxisScaleFactor);
+		}
+	}
+
+	if (plot.yRangeLow >= 0){
+		data->SetMinimum(plot.yRangeLow);
+	}
+	else {
+		if(!plot.log) data->SetMinimum(0);
+	}
+
+	data->GetXaxis()->SetRangeUser(xLow, xHigh);
 	data->GetYaxis()->SetLabelSize(0.07);
 	data->GetYaxis()->SetTitleSize(0.07);
 	data->GetYaxis()->SetTitleOffset(1.15);
@@ -389,8 +414,6 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	TString ytit = "Events / %.2f ";
 	TString yTitle = ytit+plot.unit;
 	data->GetYaxis()->SetTitle(Form(yTitle.Data(),data->GetBinWidth(1)));
-	data->SetTitle(title);
-	data->SetTitle("CMS preliminary, #sqrt{s}=8 TeV, L=19.7 fb^{-1}");
 	data->Draw("E");
 	//todo: make sure that signal is only stacked if wanted
 	//todo: somehow the stack doesn't work anymore, if there is no signal sample
@@ -411,20 +434,20 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 //	}
 	data->Draw("Esame");
 	data->Draw("axissame");
-	data->SetMinimum(0.001);
 	histos.push_back(total);
 	samples.push_back( sample("Bkg uncertainty",0,"")); //dummy sample for bkg uncertainty in legend
 	TLegend* legend = createLegend(data,histos,samples);
 	legend->Draw("same");
+
+	// draw data-MC ratio plot
 	can->cd();
-	TString ratioName = plot.identifier + "_ratioband";
-	TH1D* ratioband = new TH1D(ratioName.Data(), ratioName.Data(),nBins,xLow,xHigh);
+	TH1D* ratioband = (TH1D*) total->Clone(plot.identifier + "_ratioband");
 	for(int i=1;i<=ratioband->GetNbinsX();i++){
 		ratioband->SetBinContent(i,1);
 		ratioband->SetBinError(i,total->GetBinError(i)/total->GetBinContent(i));
 	}
-	ratioband->SetFillStyle(3013);
-	ratioband->SetFillColor(kGray+1);
+	ratioband->SetFillStyle(errorBandFillStyle);
+	ratioband->SetFillColor(errorBandColor);
 	ratioband->SetLineColor(18);
 	ratioband->SetMarkerColor(1);
 	ratioband->SetMarkerSize(0.001);
@@ -442,17 +465,20 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	ratio->GetXaxis()->SetTitleSize(0.15);
 	ratio->GetXaxis()->SetLabelSize(0.15);
 	ratio->GetXaxis()->SetTickLength(0.075);
+	ratio->GetXaxis()->SetRangeUser(xLow, xHigh);
 	ratio->GetYaxis()->SetTitleSize(0.15);
 	ratio->GetYaxis()->SetLabelSize(0.15);
 	ratio->GetYaxis()->SetTitleOffset(0.35);
 	ratio->GetYaxis()->CenterTitle();
+	ratio->GetYaxis()->SetNdivisions(4,5,0,kTRUE);
 
 	ratio->SetMarkerStyle(20);
 	ratio->SetMarkerSize(0.7);
 	ratio->SetLineColor(kBlack);
 
-	ratio->GetYaxis()->SetNdivisions(4,5,0,kTRUE);
-	ratio->GetXaxis()->Set(nBins, xLow, xHigh);
+	// line at ratio = 1
+	TLine* line = new TLine(xLow,1,xHigh,1);
+
 	ratio->Draw("E");
 	ratioband->Draw("E2same");
 	line->Draw("same");
