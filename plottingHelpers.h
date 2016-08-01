@@ -83,37 +83,6 @@ std::vector<TH1D*> getHistos(std::vector<TString> names, std::vector<double> sca
 }
 */
 
-TH1D* getDataMC(TH1D* datahist, TH1D* MChist){
-	if(verbose) std::cout << "--> getDataMC(...)" << std::endl;
-	int nbins = datahist->GetNbinsX();
-	double xlow = datahist->GetXaxis()->GetXmin();
-	double xhigh = datahist->GetXaxis()->GetXmax();
-	TH1D* hist = new TH1D("hist",";;Data/MC",nbins,xlow,xhigh);
-
-	for(int i=1;i<=nbins;i++){
-		double data = datahist->GetBinContent(i);
-		double dataerror = datahist->GetBinError(i);
-		double mc = MChist->GetBinContent(i);
-		double mcerror = MChist->GetBinError(i);
-		if(mc>0){
-			hist->SetBinContent(i,data/mc);
-			hist->SetBinError(i,TMath::Sqrt(pow(dataerror/mc,2)+pow(data*mcerror/pow(mc,2),2)));
-		}
-	}
-	double min = 999;
-	for(int i=1;i<nbins;i++){
-		if(hist->GetBinContent(i)>0){
-			if(hist->GetBinContent(i)<min)min=hist->GetBinContent(i);
-		}
-	}
-	double max = hist->GetMaximum();
-	if(max>2)max=1.5;
-	if(min<0.5)min=0.5;
-	hist->GetYaxis()->SetRangeUser(min-0.2,max+0.2);
-	hist->GetXaxis()->SetTitle(datahist->GetXaxis()->GetTitle());
-	return hist;
-}
-
 TH1D* getDataMC(TH1D* datahist, std::vector<TH1D*> MChists){
 	if(verbose) std::cout << "--> getDataMC(...)" << std::endl;
 	int nbins = datahist->GetNbinsX();
@@ -127,7 +96,7 @@ TH1D* getDataMC(TH1D* datahist, std::vector<TH1D*> MChists){
 		double dataerror = datahist->GetBinError(i);
 		double mc = 0;
 		double mcerr = 0;
-		for(unsigned j=0;j<MChists.size()-1;j++){
+		for(unsigned j=0;j<MChists.size();j++){
 			mc+=MChists.at(j)->GetBinContent(i);
 			mcerr+=TMath::Power(MChists.at(j)->GetBinError(i),2);
 		}
@@ -197,10 +166,20 @@ TH1D* getHistoFromSample(configInfo conf, plotInfo p, sample s){
 }
 
 //todo: add systematics
-std::vector<TH1D*> getHistos(configInfo conf, plotInfo p, std::vector<sample> samples){
-	if(verbose) std::cout << "--> getHistos(configInfo, plotInfo, std::vector<sample>)" << std::endl;
+std::vector<TH1D*> getHistos(configInfo conf, plotInfo p, std::vector<sample> samples, bool getSignals){
+	if(verbose) std::cout << "--> getHistos(configInfo, plotInfo, std::vector<sample>, bool)" << std::endl;
 	std::vector<TH1D*> histos;
+
+	// merge signal histos into BG histos when signal is stacked
+	if (!overlaySignal && getSignals) return histos;
+
 	for(unsigned s = 0; s < samples.size(); s++){
+		if (overlaySignal){
+			// if getSignals = true, only signal samples are returned
+			// if getSignals = false, only background samples are returned
+			if (getSignals != samples.at(s).isSignal) continue;
+		}
+
 		histos.push_back(getHistoFromSample(conf, p, samples.at(s)));
 	}
 	return histos;
@@ -229,20 +208,23 @@ TLegend* createLegend(TH1D* data, TString name){
 	return legend;
 }
 
-TLegend* createLegend(TH1D* data, std::vector<TH1D*> histos, std::vector<sample> samples){
-	if(verbose) std::cout << "--> createLegend(TH1D*, vector<TH1D*>, vector<sample>)" << std::endl;
+TLegend* createLegend(TH1D* data, TH1D* total, std::vector<TH1D*> backgrounds, std::vector<TH1D*> signals, std::vector<sample> samples){
+	if(verbose) std::cout << "--> createLegend(TH1D*, TH1D*, vector<TH1D*>, vector<TH1D*>, vector<sample>)" << std::endl;
 	TLegend* legend = new TLegend(0.73,0.37,0.93,0.87);
 	legend->SetFillColor(0);
 	legend->SetBorderSize(0);
 	legend->SetFillStyle(0);
 	legend->AddEntry(data,"Data","pe");
-	if(histos.size() != samples.size()) std::cout << "ERROR: createLegend: histos and samples have unequal size!" << std::endl;
-	for(int i=histos.size()-1;i>=0;i--){
-		if(samples.at(i).legName.Contains("Signal")){
-			legend->AddEntry(histos.at(i),samples.at(i).legName,"l");
-		}else{
-			legend->AddEntry(histos.at(i),samples.at(i).legName,"F");
-		}
+	legend->AddEntry(total, "Bkg uncertainty", "F");
+
+	if(backgrounds.size() + signals.size() != samples.size())
+		std::cout << "ERROR: createLegend: histos and samples have unequal size!" << std::endl;
+	for(int i=backgrounds.size()-1;i>=0;i--){
+		legend->AddEntry(backgrounds.at(i),samples.at(i).legName,"F");
+	}
+	for(int i=signals.size()-1;i>=0;i--){
+		int i_sample = i + backgrounds.size();
+		legend->AddEntry(signals.at(i),samples.at(i_sample).legName,"l");
 	}
 	return legend;
 }
@@ -358,17 +340,17 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	gROOT->ForceStyle(true);
 
 	// read histograms from input file
-	std::vector<TH1D*> histos = getHistos(conf, plot, samples);
-	TH1D* ratio = getDataMC(data,histos);
+	std::vector<TH1D*> backgrounds = getHistos(conf, plot, samples, false);
+	std::vector<TH1D*> signals = getHistos(conf, plot, samples, true);
+	TH1D* ratio = getDataMC(data,backgrounds);
 
 	//get correct xAxis range
 	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : data->GetXaxis()->GetXmin();
 	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : data->GetXaxis()->GetXmax();
 
 	TCanvas* can = new TCanvas();
-	//todo: make sure that signal is only stacked if wanted
-	THStack* stack = produceHistStack(histos);
-	TH1D* total = produceTotal(histos);
+	THStack* stack = produceHistStack(backgrounds);
+	TH1D* total = produceTotal(backgrounds);
 	TPad* Pad1 = new TPad("Pad1","Pad1",0.,0.3,1.,1.);
 	Pad1->SetTopMargin(0.07);
 	Pad1->SetLeftMargin(0.15);
@@ -415,28 +397,21 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	TString yTitle = ytit+plot.unit;
 	data->GetYaxis()->SetTitle(Form(yTitle.Data(),data->GetBinWidth(1)));
 	data->Draw("E");
-	//todo: make sure that signal is only stacked if wanted
-	//todo: somehow the stack doesn't work anymore, if there is no signal sample
-//	int signalhist = histos.size()-1;
-//	TH1D* signal = (TH1D*) histos.at(signalhist)->Clone();
-//	if(signaltop)stack->Add(signal);
 	stack->Draw("Histsame");
 	total->Draw("E2same");
-//	if(!signaltop){
-//		//signal->SetFillColor(10);
-//		//signal->SetFillStyle(3004);
-//		//signal->SetLineStyle(9);
-//		//signal->SetFillStyle(0);
-//		//signal->SetLineWidth(2);
-//		signal->SetLineColor(kBlack);
-//		signal->Scale(1);
-//		signal->Draw("Histsame");
-//	}
+
+	// draw signal samples overlayed
+	for (unsigned s = 0; s < signals.size(); s++){
+		signals.at(s)->SetFillStyle(0);
+		signals.at(s)->SetLineStyle(9);
+		signals.at(s)->SetLineWidth(3);
+		signals.at(s)->SetLineColor(signals.at(s)->GetFillColor());
+		signals.at(s)->Draw("Histsame");
+	}
+
 	data->Draw("Esame");
 	data->Draw("axissame");
-	histos.push_back(total);
-	samples.push_back( sample("Bkg uncertainty",0,"")); //dummy sample for bkg uncertainty in legend
-	TLegend* legend = createLegend(data,histos,samples);
+	TLegend* legend = createLegend(data, total, backgrounds,signals,samples);
 	legend->Draw("same");
 
 	// draw data-MC ratio plot

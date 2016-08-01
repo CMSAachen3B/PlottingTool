@@ -30,22 +30,24 @@ struct sample{
 	std::vector<double> mcScale;
 	double syst;
 	std::vector<TString> identifier;
+	bool isSignal; // signals will be overlayed in plots
 
 	//// constructors
 	// default constructor
 	sample(){};
 	// create sample from raw numbers
-	sample(TString LegName, double Xsec, int NEvt, double lumi, int Color, TString Identifier){
+	sample(TString LegName, double Xsec, int NEvt, double lumi, int Color, TString Identifier, bool IsSignal = false){
 		legName = LegName;
 		xsec = Xsec;
 		nEvt = NEvt;
 		color = Color;
 		identifier.push_back(Identifier);
 		mcScale.push_back(lumi * Xsec / NEvt);
+		isSignal = IsSignal;
 		//todo: define syst
 	}
 	// create sample using dataMCType and SkimSummary info
-	sample(int dataMcType, TString LegName, double Xsec, double lumi, int Color, TString Identifier, std::map<int,int> nEventsMap){
+	sample(int dataMcType, TString LegName, double Xsec, double lumi, int Color, TString Identifier, std::map<int,int> nEventsMap, bool IsSignal = false){
 		id = dataMcType;
 		legName = LegName;
 		xsec = Xsec;
@@ -53,14 +55,16 @@ struct sample{
 		color = Color;
 		identifier.push_back(Identifier);
 		mcScale.push_back(lumi * xsec / nEvt);
+		isSignal = IsSignal;
 		//todo: define syst
 	}
 	// create slim sample without scaling information
-	sample(TString LegName, int Color, TString Identifier){
+	sample(TString LegName, int Color, TString Identifier, bool IsSignal = false){
 		legName = LegName;
 		color = Color;
 		identifier.push_back(Identifier);
 		mcScale.push_back(1);
+		isSignal = IsSignal;
 		//todo: define syst
 	}
 	// copy constructor
@@ -73,6 +77,7 @@ struct sample{
 		mcScale = original.mcScale;
 		syst = original.syst;
 		identifier = original.identifier;
+		isSignal = original.isSignal;
 	}
 	sample(const sample &original, TString LegName, int Color){
 		id = original.id;
@@ -83,6 +88,7 @@ struct sample{
 		mcScale = original.mcScale;
 		syst = original.syst;
 		identifier = original.identifier;
+		isSignal = original.isSignal;
 	}
 	// add sample to existing sample
 	sample operator+=(const sample& rhs){
@@ -92,6 +98,8 @@ struct sample{
 		}
 		identifier.push_back(rhs.identifier.at(0));
 		if(rhs.mcScale.size() == 1) mcScale.push_back(rhs.mcScale.at(0));
+		if(isSignal != rhs.isSignal)
+			std::cout << "WARNING: Combining signal and background samples when adding " << rhs.identifier.at(0) << std::endl;
 		//todo: define syst
 		return *this;
 	}
@@ -111,6 +119,7 @@ void printSample(sample& s, configInfo conf){
 			return;
 	}
 
+	printf("  is considered as %s\n", s.isSignal ? "signal" : "background");
 	printf("  will be drawn with color = %i\n", s.color);
 	printf("  sample consists of %i subsamples:\n", s.identifier.size());
 	for(unsigned i = 0; i<s.identifier.size(); i++){

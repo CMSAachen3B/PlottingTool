@@ -14,9 +14,8 @@
 bool verbose = false;
 bool testPlotting = false;
 
-// draw signal stacked on top (or overlaying)
-// todo: needs to be implemented. does nothing yet.
-bool signaltop = false;
+// draw signal as overlaying curve (or stacked on top)
+bool overlaySignal = true;
 
 // create configInfo struct
 double lumi = 19712.;

@@ -45,6 +45,7 @@ std::vector<sample> defineSamples(){
 	sample s_higgs(s_ggHiggs, "H", 630);
 	s_higgs += s_vbfHiggs;
 	s_higgs += s_apHiggs;
+	s_higgs.isSignal = true;
 	sample s_dy(s_ztt, "DY", col_htt_Ztt);
 	s_dy += s_zll;
 	sample s_ewk(s_ww, "electroweak", col_htt_W);
@@ -59,8 +60,9 @@ std::vector<sample> defineSamples(){
 	s_top += s_tw;
 	s_top += s_tbarW;
 
-	// define which samples to plot and in which order
-	// sample pushed back later will be drawn later, i.e. on top
+	// define which samples to plot and in which order:
+	// sample pushed back later will be drawn later, i.e. on top.
+	// All signal samples MUST be added after all background samples! Add them last.
 	std::vector<sample> samples;
 	samples.push_back(s_qcd);
 	samples.push_back(s_top);
