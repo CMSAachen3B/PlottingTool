@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////
 //
-// plotting.cc: main macro to run in ROOT
+// runPlotting.cc: main macro to run in ROOT
 // call like "root runPlotting.cc+" in your shell
 //
 /////////////////////////////////////////////////
@@ -11,6 +11,7 @@
 #include "TH1D.h"
 #include "TLegend.h"
 #include "TColor.h"
+#include "TGaxis.h"
 
 #include <vector>
 
@@ -29,6 +30,7 @@ void runPlotting(){
 	cmsText = "";
 	writeExtraText = false;
 	gStyle->SetOptStat(0);
+	TGaxis::SetMaxDigits(3);
 
 	// define which samples to use
 	std::vector<sample> samples = defineSamples();

@@ -148,7 +148,6 @@ TH1D* produceTotal(std::vector<TH1D*> histos){
 	return total;
 }
 
-//todo: add systematics
 TH1D* getHistoFromSample(configInfo conf, plotInfo p, sample s){
 	if(verbose) std::cout << "--> getHistoFromSample(...)" << std::endl;
 	TH1D* tmp = getHisto(conf, p.identifier + s.identifier.at(0), 1, s.color);
@@ -156,16 +155,19 @@ TH1D* getHistoFromSample(configInfo conf, plotInfo p, sample s){
 	histo->Sumw2();
 	// add up subsamples of this sample
 	for(unsigned ss = 0; ss < s.identifier.size(); ss++){
-		histo->Add(getHisto(conf, p.identifier + s.identifier.at(ss), s.mcScale.at(ss), s.color));
+		TH1D* hist = getHisto(conf, p.identifier + s.identifier.at(ss), s.mcScale.at(ss), s.color);
+		// add systematic uncertainty to stat. unc.
+		for(int i=1;i<hist->GetNbinsX();i++){
+			hist->SetBinError(i,TMath::Sqrt(TMath::Power(hist->GetBinError(i),2)+TMath::Power(s.syst.at(ss)*hist->GetBinContent(i),2)));
+		}
+		histo->Add(hist);
 	}
 	histo->SetFillColor(s.color);
 	// todo: is this a good place to do the rebinning and xRange setting? or move to getHisto?
 	manipulateHisto(histo, p);
-	//histo->SetLineColor(1);
 	return histo;
 }
 
-//todo: add systematics
 std::vector<TH1D*> getHistos(configInfo conf, plotInfo p, std::vector<sample> samples, bool getSignals){
 	if(verbose) std::cout << "--> getHistos(configInfo, plotInfo, std::vector<sample>, bool)" << std::endl;
 	std::vector<TH1D*> histos;
@@ -183,6 +185,22 @@ std::vector<TH1D*> getHistos(configInfo conf, plotInfo p, std::vector<sample> sa
 		histos.push_back(getHistoFromSample(conf, p, samples.at(s)));
 	}
 	return histos;
+}
+
+// normalize a histogram to bin width
+void normToBinWidth(TH1D* hist){
+	cout << "Scale hist " << hist->GetName() << endl;
+	int nbins = hist->GetNbinsX();
+	for(int i=1;i<=nbins;i++){
+		double scale = 1. / hist->GetBinWidth(i);
+		hist->SetBinContent(i, scale * hist->GetBinContent(i));
+		hist->SetBinError(i, scale * hist->GetBinError(i));
+	}
+}
+void normToBinWidth(std::vector<TH1D*> hists){
+	for (unsigned i = 0; i < hists.size(); i++){
+		normToBinWidth(hists.at(i));
+	}
 }
 
 // needs to be adapted
@@ -208,9 +226,18 @@ TLegend* createLegend(TH1D* data, TString name){
 	return legend;
 }
 
-TLegend* createLegend(TH1D* data, TH1D* total, std::vector<TH1D*> backgrounds, std::vector<TH1D*> signals, std::vector<sample> samples){
+TLegend* createLegend(TH1D* data, TH1D* total, std::vector<TH1D*> backgrounds, std::vector<TH1D*> signals, std::vector<sample> samples, plotInfo plot){
 	if(verbose) std::cout << "--> createLegend(TH1D*, TH1D*, vector<TH1D*>, vector<TH1D*>, vector<sample>)" << std::endl;
-	TLegend* legend = new TLegend(0.73,0.37,0.93,0.87);
+
+	TLegend* legend = 0;
+	if (plot.legOnTop){
+		legend = new TLegend(0.2, 0.72, 0.9, 0.87);
+		legend->SetNColumns(3);
+	}
+	else {
+		legend = new TLegend(0.73,0.37,0.93,0.87);
+	}
+
 	legend->SetFillColor(0);
 	legend->SetBorderSize(0);
 	legend->SetFillStyle(0);
@@ -224,7 +251,9 @@ TLegend* createLegend(TH1D* data, TH1D* total, std::vector<TH1D*> backgrounds, s
 	}
 	for(int i=signals.size()-1;i>=0;i--){
 		int i_sample = i + backgrounds.size();
-		legend->AddEntry(signals.at(i),samples.at(i_sample).legName,"l");
+		TString label = samples.at(i_sample).legName;
+		if(plot.scaleSignal != 1) label = label +  " x" + TString::Itoa(plot.scaleSignal, 10);
+		legend->AddEntry(signals.at(i),label,"l");
 	}
 	return legend;
 }
@@ -342,6 +371,13 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	// read histograms from input file
 	std::vector<TH1D*> backgrounds = getHistos(conf, plot, samples, false);
 	std::vector<TH1D*> signals = getHistos(conf, plot, samples, true);
+
+	if (plot.normByBinWidth){
+		normToBinWidth(data);
+		normToBinWidth(backgrounds);
+		normToBinWidth(signals);
+	}
+
 	TH1D* ratio = getDataMC(data,backgrounds);
 
 	//get correct xAxis range
@@ -384,18 +420,22 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 		data->SetMinimum(plot.yRangeLow);
 	}
 	else {
-		if(!plot.log) data->SetMinimum(0);
+		if(!plot.log) data->SetMinimum(0.0001);
 	}
 
 	data->GetXaxis()->SetRangeUser(xLow, xHigh);
+	data->GetXaxis()->SetNoExponent(true);
 	data->GetYaxis()->SetLabelSize(0.07);
 	data->GetYaxis()->SetTitleSize(0.07);
-	data->GetYaxis()->SetTitleOffset(1.15);
+	data->GetYaxis()->SetTitleOffset(1.0);
 	data->SetMarkerColor(kBlack);
 	data->SetMarkerStyle(20);
-	TString ytit = "Events / %.2f ";
-	TString yTitle = ytit+plot.unit;
-	data->GetYaxis()->SetTitle(Form(yTitle.Data(),data->GetBinWidth(1)));
+	TString yTitle = "Events";
+	if (plot.normByBinWidth){
+		yTitle = "Events / GeV";
+		std::cout << "WARNING: Norm by bin width not properly implemented" << std::endl;
+	}
+	data->GetYaxis()->SetTitle(yTitle);
 	data->Draw("E");
 	stack->Draw("Histsame");
 	total->Draw("E2same");
@@ -403,16 +443,18 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	// draw signal samples overlayed
 	for (unsigned s = 0; s < signals.size(); s++){
 		signals.at(s)->SetFillStyle(0);
-		signals.at(s)->SetLineStyle(9);
+		signals.at(s)->SetLineStyle(7);
 		signals.at(s)->SetLineWidth(3);
 		signals.at(s)->SetLineColor(signals.at(s)->GetFillColor());
+		signals.at(s)->Scale(plot.scaleSignal);
 		signals.at(s)->Draw("Histsame");
 	}
 
 	data->Draw("Esame");
 	data->Draw("axissame");
-	TLegend* legend = createLegend(data, total, backgrounds,signals,samples);
+	TLegend* legend = createLegend(data, total, backgrounds,signals,samples, plot);
 	legend->Draw("same");
+	Pad1->RedrawAxis();
 
 	// draw data-MC ratio plot
 	can->cd();
@@ -437,13 +479,16 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	Pad2->Draw();
 	Pad2->cd();
 
+	if (plot.xAxisLabel != "default") ratio->GetXaxis()->SetTitle(plot.xAxisLabel);
 	ratio->GetXaxis()->SetTitleSize(0.15);
+	ratio->GetXaxis()->SetTitleOffset(1.1);
 	ratio->GetXaxis()->SetLabelSize(0.15);
 	ratio->GetXaxis()->SetTickLength(0.075);
 	ratio->GetXaxis()->SetRangeUser(xLow, xHigh);
+	ratio->GetXaxis()->SetNoExponent(true);
 	ratio->GetYaxis()->SetTitleSize(0.15);
 	ratio->GetYaxis()->SetLabelSize(0.15);
-	ratio->GetYaxis()->SetTitleOffset(0.35);
+	ratio->GetYaxis()->SetTitleOffset(0.42);
 	ratio->GetYaxis()->CenterTitle();
 	ratio->GetYaxis()->SetNdivisions(4,5,0,kTRUE);
 
@@ -629,15 +674,6 @@ void drawPlot(TH1D* data, std::vector<TH1D*> histos, TH1D* ratio, std::vector<TS
 	CMS_lumi(Pad1,2,0);
 }
 */
-
-double QuadraticSum(int nval, double values[]){
-	if(verbose) std::cout << "--> QuadraticSum(...)" << std::endl;
-	double sum = 0.;
-	for(int i=0;i<nval;i++){
-		sum+=TMath::Power(values[i],2);
-	}
-	return TMath::Sqrt(sum);
-}
 
 // === some useful color definitions ===
 // htautau colors

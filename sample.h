@@ -14,6 +14,7 @@
 #include <fstream>
 #include <sstream>
 #include "Riostream.h"
+#include "TMath.h"
 #include <fstream>
 #include <istream>
 
@@ -28,9 +29,9 @@ struct sample{
 	int color;
 	TString legName;
 	std::vector<double> mcScale;
-	double syst;
 	std::vector<TString> identifier;
 	bool isSignal; // signals will be overlayed in plots
+	std::vector<double> syst; // symmetric systematic uncertainty on the normalization of the sample
 
 	//// constructors
 	// default constructor
@@ -44,7 +45,7 @@ struct sample{
 		identifier.push_back(Identifier);
 		mcScale.push_back(lumi * Xsec / NEvt);
 		isSignal = IsSignal;
-		//todo: define syst
+		syst.push_back(0);
 	}
 	// create sample using dataMCType and SkimSummary info
 	sample(int dataMcType, TString LegName, double Xsec, double lumi, int Color, TString Identifier, std::map<int,int> nEventsMap, bool IsSignal = false){
@@ -56,7 +57,7 @@ struct sample{
 		identifier.push_back(Identifier);
 		mcScale.push_back(lumi * xsec / nEvt);
 		isSignal = IsSignal;
-		//todo: define syst
+		syst.push_back(0);
 	}
 	// create slim sample without scaling information
 	sample(TString LegName, int Color, TString Identifier, bool IsSignal = false){
@@ -65,7 +66,7 @@ struct sample{
 		identifier.push_back(Identifier);
 		mcScale.push_back(1);
 		isSignal = IsSignal;
-		//todo: define syst
+		syst.push_back(0);
 	}
 	// copy constructor
 	sample(const sample &original){
@@ -92,18 +93,25 @@ struct sample{
 	}
 	// add sample to existing sample
 	sample operator+=(const sample& rhs){
-		if(rhs.identifier.size() != 1){
-			std::cout << "ERROR: sample to add must contain exactly one element, size = " << rhs.identifier.size() << std::endl;
-			return sample();
-		}
-		identifier.push_back(rhs.identifier.at(0));
-		if(rhs.mcScale.size() == 1) mcScale.push_back(rhs.mcScale.at(0));
 		if(isSignal != rhs.isSignal)
 			std::cout << "WARNING: Combining signal and background samples when adding " << rhs.identifier.at(0) << std::endl;
-		//todo: define syst
+		for (unsigned i = 0; i < rhs.identifier.size(); i++){
+			identifier.push_back(rhs.identifier.at(i));
+			mcScale.push_back(rhs.mcScale.at(i));
+			syst.push_back(rhs.syst.at(i));
+		}
+
 		return *this;
 	}
 };
+
+// add systematic uncertainty to sample
+void addSyst(sample& s, double sysUnc){
+	for(unsigned i = 0; i < s.syst.size(); i++){
+		double oldSys = s.syst.at(i);
+		s.syst.at(i) = TMath::Sqrt(oldSys*oldSys + sysUnc*sysUnc);
+	}
+}
 
 // print sample, for debugging purposes
 void printSample(sample& s, configInfo conf){
@@ -124,9 +132,9 @@ void printSample(sample& s, configInfo conf){
 	printf("  sample consists of %i subsamples:\n", s.identifier.size());
 	for(unsigned i = 0; i<s.identifier.size(); i++){
 		printf("    subsample %i has identifier %s \n", i+1, s.identifier.at(i).Data());
+		if(s.syst.at(i)) printf("      and systematic uncertainty of %.3f\n", s.syst.at(i));
 		if(!conf.isFileLumiScaled) printf("      and mcScale = %.6f\n", s.mcScale.at(i));
 	}
-	//todo: add syst
 	return;
 }
 
@@ -168,9 +176,10 @@ bool testSample(sample sam){
 		printf(" Empty sample. Why are you even looking at this?\n");
 		return false;
 	}
-	if(sam.identifier.size() != sam.mcScale.size()){
+	unsigned idSize(sam.identifier.size()), mcScaleSize(sam.mcScale.size()), systSize(sam.syst.size());
+	if(idSize != mcScaleSize || idSize != systSize){
 		printf(" ERROR: sizes of vectors in sample differ! \n");
-		printf(" size(identifier) = %i, size(mcScale) = %i\n", sam.identifier.size(), sam.mcScale.size());
+		printf(" size(identifier) = %i, size(mcScale) = %i, size(syst) = %i\n", idSize, mcScaleSize, systSize);
 		return false;
 	}
 	if(sam.legName == ""){

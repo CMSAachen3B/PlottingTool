@@ -41,24 +41,60 @@ std::vector<sample> defineSamples(){
 	// sample s_apHiggs(13,"H_{AP}", 0.0771792, lumi, 634, "MC_WHZHTTHTauTauM125", MnEvents );
 
 
-	// combine samples for plotting
-	sample s_higgs(s_ggHiggs, "H", 630);
+	// combine samples as is done in Higgs analysis
+	sample s_higgs(s_ggHiggs, "H", col_rwth_petrol);
 	s_higgs += s_vbfHiggs;
-	s_higgs += s_apHiggs;
+	//s_higgs += s_apHiggs;
 	s_higgs.isSignal = true;
-	sample s_dy(s_ztt, "DY", col_htt_Ztt);
-	s_dy += s_zll;
-	sample s_ewk(s_ww, "electroweak", col_htt_W);
-	s_ewk += s_wz2l2q;
-	s_ewk += s_wz3l1nu;
-	s_ewk += s_zz4l;
-	s_ewk += s_zz2l2nu;
-	s_ewk += s_zz2l2q;
-	s_ewk += s_Wlnu;
-	s_ewk += s_Wtaunu;
+	sample s_vv(s_ww, "VV", col_htt_W);
+	s_vv += s_wz2l2q;
+	s_vv += s_wz3l1nu;
+	s_vv += s_zz4l;
+	s_vv += s_zz2l2nu;
+	s_vv += s_zz2l2q;
+	sample s_W(s_Wlnu, "W", col_htt_W);
+	s_W += s_Wtaunu;
 	sample s_top(s_ttbar, "top", col_htt_tt);
 	s_top += s_tw;
 	s_top += s_tbarW;
+
+	// add systematic uncertainties
+	// systematics of signal samples are omitted
+	// channel dependent systematics are omitted, unless identical for most categories
+	double sys_muEff = 0.02;
+	addSyst(s_ztt,	sys_muEff);
+	addSyst(s_zll,	sys_muEff);
+	addSyst(s_top,	sys_muEff);
+	addSyst(s_vv,	sys_muEff);
+	double sys_tauEff = 0.08;
+	addSyst(s_ztt,	sys_tauEff);
+	addSyst(s_top,	sys_tauEff);
+	addSyst(s_vv,	sys_tauEff);
+	double sys_zttNorm = 0.03;
+	addSyst(s_ztt,	sys_zttNorm);
+	addSyst(s_zll,	sys_zttNorm);
+	double sys_extrap_ztt = 0.05; // channel dependent
+	addSyst(s_ztt,	sys_extrap_ztt);
+	double sys_ttbarNorm = 0.1; // channel dependent
+	addSyst(s_top,	sys_ttbarNorm);
+	double sys_WNorm = 0.2; // channel dependent
+	addSyst(s_W,	sys_WNorm);
+	double sys_DiBosonNorm = 0.15; // channel dependent
+	addSyst(s_vv,	sys_DiBosonNorm);
+	double sys_QCDSyst = 0.06; // channel dependent
+	addSyst(s_qcd,	sys_QCDSyst);
+
+	// lumi uncertainty is neglected in datacards
+	// plot here anyway, might be important in sidebands
+	double sys_lumi = 0.026;
+	addSyst(s_vv,	sys_lumi);
+	addSyst(s_top,	sys_lumi);
+
+	// combine samples further for plotting
+	sample s_dy(s_ztt, "DY", col_htt_Ztt);
+	s_dy += s_zll;
+	sample s_ewk(s_vv, "electroweak", col_htt_W);
+	s_ewk += s_W;
 
 	// define which samples to plot and in which order:
 	// sample pushed back later will be drawn later, i.e. on top.
@@ -86,23 +122,67 @@ std::vector<sample> defineSamples(){
 std::vector<plotInfo> definePlots(){
 	std::vector<plotInfo> plots;
 
-	plots.push_back( plotInfo("Cut_10_Nminus1_MT_", "GeV", false, 2, 0., 140.) );
-	plots.push_back( plotInfo("TauSelPt", "GeV", true, 2, 20, 100) );
-	plots.push_back( plotInfo("TauSelEta", "", false, 2, -2.3, 2.3) );
+	int sigScale = 50;
+	int logSigScale = 50;
+
+	plotInfo mt("Cut_10_Nminus1_MT_", "GeV", false, 2, 0., 140.);
+	mt.scaleSignal = 100;
+	plots.push_back( mt );
+
+	plotInfo tauSelPt("TauSelPt", "GeV", true, 2, 20, 100);
+	tauSelPt.xAxisLabel = "p_{T}(#tau_{h})/GeV";
+	tauSelPt.scaleSignal = logSigScale;
+	plots.push_back( tauSelPt );
+
+	plotInfo tauSelEta("TauSelEta", "", false, 2, -2.3, 2.3);
+	tauSelEta.xAxisLabel = "#eta(#tau_{h})";
+	tauSelEta.scaleSignal = sigScale;
+	plots.push_back( tauSelEta );
 
 	plotInfo muSelPt("MuSelPt", "GeV", true, 2, 20, 100);
 	muSelPt.yRangeHigh = 2e6;
 	muSelPt.yRangeLow = 5;
+	muSelPt.xAxisLabel = "p_{T}(#mu)/GeV";
+	muSelPt.scaleSignal = logSigScale;
 	plots.push_back( muSelPt );
 
-	plots.push_back( plotInfo("MuSelEta", "", false, 2, -2.1, 2.1) );
-	plots.push_back( plotInfo("MetPt", "GeV", true, 2) );
-	plots.push_back( plotInfo("MetPhi", "GeV", false, 2) );
-	plots.push_back( plotInfo("visibleMass", "GeV", false, 2, 0., 140.) );
-	plots.push_back( plotInfo("NJetsId", "", true, 1, -0.5, 7.5) );
-	plots.push_back( plotInfo("JetsDEta", "", false, 2, -8.0, 8.0) );
-	plots.push_back( plotInfo("JetsInvM", "GeV", true, 2, 0, 1400) );
-	plots.push_back( plotInfo("HiggsPt", "GeV", true, 2) );
+	plotInfo muSelEta("MuSelEta", "", false, 2, -2.1, 2.1);
+	muSelEta.legOnTop = true;
+	muSelEta.xAxisLabel = "#eta(#mu)";
+	muSelEta.scaleSignal = 10;
+	muSelEta.scaleSignal = sigScale;
+	plots.push_back( muSelEta );
+
+	plotInfo metPt("MetPt", "GeV", true, 2);
+	metPt.scaleSignal = logSigScale;
+	plots.push_back( metPt );
+
+	plotInfo metPhi("MetPhi", "GeV", false, 2);
+	metPhi.scaleSignal = sigScale;
+	plots.push_back( metPhi );
+
+	plotInfo visibleMass("visibleMass", "GeV", false, 2, 0., 140.);
+	visibleMass.scaleSignal = sigScale;
+	plots.push_back( visibleMass );
+
+	plotInfo nJetsId("NJetsId", "", true, 1, -0.5, 7.5);
+	nJetsId.scaleSignal = logSigScale;
+	plots.push_back( nJetsId );
+
+	plotInfo jetsDEta("JetsDEta", "", false, 4, -8.0, 8.0);
+	jetsDEta.xAxisLabel = "#Delta#eta_{jj}";
+	jetsDEta.scaleSignal = sigScale;
+	plots.push_back( jetsDEta );
+
+	plotInfo jetsInvM("JetsInvM", "GeV", true, 2, 0, 1400);
+	jetsInvM.xAxisLabel = "m_{jj}/GeV";
+	jetsInvM.scaleSignal = logSigScale;
+	plots.push_back( jetsInvM );
+
+	plotInfo higgsPt("HiggsPt", "GeV", true, 2);
+	higgsPt.xAxisLabel = "p_{T}^{#tau#tau}/GeV";
+	higgsPt.scaleSignal = logSigScale;
+	plots.push_back( higgsPt );
 
 	return plots;
 }

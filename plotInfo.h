@@ -10,6 +10,7 @@
 
 struct plotInfo{
 	TString identifier;
+	TString xAxisLabel;
 	TString unit;
 	bool log;
 	unsigned rebin;
@@ -17,6 +18,9 @@ struct plotInfo{
 	double xRangeHigh;
 	double yRangeLow;
 	double yRangeHigh;
+	bool legOnTop;
+	bool normByBinWidth;
+	int scaleSignal;
 
 	/* ideas for further members:
 	int nLegColumn; //number of columns in legend
@@ -39,6 +43,10 @@ struct plotInfo{
 		// members set to default values have to be set manually
 		yRangeLow = -9;
 		yRangeHigh = -9;
+		legOnTop = defaultLegOnTop;
+		normByBinWidth = false;
+		xAxisLabel = "default"; // use axis label from read plot if set to default
+		scaleSignal = 1.0;
 	}
 };
 
