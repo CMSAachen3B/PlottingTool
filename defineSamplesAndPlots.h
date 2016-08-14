@@ -1,4 +1,4 @@
-#ifndef defineSamplesAnsdPlots_h
+#ifndef defineSamplesAndPlots_h
 #define defineSamplesAndPlots_h
 
 /////////////////////////////////////////////////

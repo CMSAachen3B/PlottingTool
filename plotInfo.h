@@ -21,6 +21,7 @@ struct plotInfo{
 	bool legOnTop;
 	bool normByBinWidth;
 	int scaleSignal;
+	bool compareShapes;
 
 	/* ideas for further members:
 	int nLegColumn; //number of columns in legend
@@ -47,6 +48,7 @@ struct plotInfo{
 		normByBinWidth = false;
 		xAxisLabel = "default"; // use axis label from read plot if set to default
 		scaleSignal = 1.0;
+		compareShapes = false;
 	}
 };
 

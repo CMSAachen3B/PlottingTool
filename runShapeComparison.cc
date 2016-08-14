@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////
 //
-// runPlotting.cc: main macro to run in ROOT
-// call like "root runPlotting.cc+" in your shell
+// runShapeComparison.cc: main macro to run in ROOT
+// call like "root runShapeComparison.cc+" in your shell
 //
 /////////////////////////////////////////////////
 
@@ -19,10 +19,10 @@
 #include "CMS_lumi.C"
 
 #include "userConfig.h"
-#include "defineSamplesAndPlots.h"
+#include "defineSVFitMassComparison.h"
 #include "plottingHelpers.h"
 
-void runPlotting(){
+void runShapeComparison(){
 	if(verbose) std::cout << "--> plotting()" << std::endl;
 	gROOT->LoadMacro("tdrstyle.C");
 	setTDRStyle();
@@ -33,30 +33,21 @@ void runPlotting(){
 	TGaxis::SetMaxDigits(3);
 
 	// define which samples to use
-	std::vector<sample> samples = defineSamples();
+	std::vector<sample> samples = defineSVFitCompSamples();
 
 	// define which plots to draw
-	std::vector<plotInfo> plots = definePlots();
+	std::vector<plotInfo> plots = defineSVFitCompPlots();
 
 	// test validity of structs
 	testInputs(conf, samples, plots);
 	
+	// dummy datahists
+	TH1D* datahist = 0;
+
 	// create plots
-	if(testPlotting){
-		plotInfo testPlot = plots.at(0);
-		TH1D* datahist = getHisto(conf, testPlot.identifier+"Data", 1, 1);
-		manipulateHisto(datahist, testPlot);
-		drawPlot(conf, testPlot, datahist, samples);
-	}else{
-		std::vector<TH1D*> datahists;
-		for(unsigned p = 0; p < plots.size(); p++){
-			TH1D* datahist = getHisto(conf, plots.at(p).identifier+"Data", 1, 1);
-			manipulateHisto(datahist, plots.at(p));
-			datahists.push_back(datahist);
-		}
-		for(unsigned p = 0; p < plots.size(); p++){
-			drawPlot(conf, plots.at(p), datahists.at(p), samples);
-		}
+
+	for(unsigned p = 0; p < plots.size(); p++){
+		drawPlot(conf, plots.at(p), datahist, samples);
 	}
 
 	std::cout << "Plots created." << std::endl;

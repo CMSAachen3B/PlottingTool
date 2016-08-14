@@ -258,6 +258,28 @@ TLegend* createLegend(TH1D* data, TH1D* total, std::vector<TH1D*> backgrounds, s
 	return legend;
 }
 
+TLegend* createLegendShapeComparison(std::vector<TH1D*> signals, std::vector<sample> samples, plotInfo plot){
+	if(verbose) std::cout << "--> createLegendShapeComparison(vector<TH1D*>, vector<TH1D*>, vector<sample>)" << std::endl;
+
+	TLegend* legend = 0;
+	if (plot.legOnTop){
+		legend = new TLegend(0.2, 0.80, 0.9, 0.87);
+		legend->SetNColumns(2);
+	}
+	else {
+		legend = new TLegend(0.73,0.37,0.93,0.87);
+	}
+
+	legend->SetFillColor(0);
+	legend->SetBorderSize(0);
+	legend->SetFillStyle(0);
+	for(unsigned i=0;i<signals.size();i++){
+		TString label = samples.at(i).legName;
+		legend->AddEntry(signals.at(i),label,"l");
+	}
+	return legend;
+}
+
 
 // get a TString from the current time
 // stolen from http://www.cplusplus.com/reference/ctime/strftime/
@@ -359,8 +381,101 @@ void drawDataOnlyPlot(TH1D* data, TString name, TString title, TString unit){
 }
 */
 
+void drawShapeComparison(configInfo conf, plotInfo plot, std::vector<sample> samples){
+	if(verbose) std::cout << "--> drawShapeComparison(configInfo, plotInfo, vector<sample>, TString)" << std::endl;
+	if(!plot.compareShapes){
+		std::cout << "ERROR: drawShapeComparison called for non-shape plotInfo object" << std::endl;
+		return;
+	}
+
+	// Set tick marks on all 4 sides of pad
+	gStyle->SetPadTickX(1);
+	gStyle->SetPadTickY(1);
+	gStyle->SetPalette(1);
+	gROOT->ForceStyle(true);
+
+	// read histograms from input file
+	std::vector<TH1D*> signals = getHistos(conf, plot, samples, true);
+
+	// scale to unity
+	double max = 0;
+	for (unsigned sig = 0; sig < signals.size(); sig++){
+		signals.at(sig)->Scale(1. / signals.at(sig)->Integral());
+		if (signals.at(sig)->GetMaximum() > max) max = signals.at(sig)->GetMaximum();
+	}
+
+	//get correct xAxis range
+	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : signals.at(0)->GetXaxis()->GetXmin();
+	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : signals.at(0)->GetXaxis()->GetXmax();
+
+	TCanvas* can = new TCanvas();
+
+	double yAxisScaleFactor = 1.5; // for linear y-axis
+	if(plot.log){
+		can->SetLogy();
+		yAxisScaleFactor = 100; // for log y-axis
+	}
+
+	can->Draw();
+	can->cd();
+	CMS_lumi(can,2,0);
+	can->Update();
+
+	if (plot.yRangeHigh >= 0){
+		signals.at(0)->SetMaximum(plot.yRangeHigh);
+	}
+	else {
+		signals.at(0)->SetMaximum(max*1.3);
+	}
+
+	if (plot.yRangeLow >= 0){
+		signals.at(0)->SetMinimum(plot.yRangeLow);
+	}
+	else {
+		if(!plot.log) signals.at(0)->SetMinimum(0.0001);
+	}
+
+	if (plot.xAxisLabel != "default") signals.at(0)->GetXaxis()->SetTitle(plot.xAxisLabel);
+	//signals.at(0)->GetXaxis()->SetTitleSize(0.15);
+	//signals.at(0)->GetXaxis()->SetTitleOffset(1.1);
+	//signals.at(0)->GetXaxis()->SetLabelSize(0.15);
+	//signals.at(0)->GetXaxis()->SetTickLength(0.075);
+	signals.at(0)->GetXaxis()->SetRangeUser(xLow, xHigh);
+	signals.at(0)->GetXaxis()->SetNoExponent(true);
+	//signals.at(0)->GetYaxis()->SetLabelSize(0.07);
+	//signals.at(0)->GetYaxis()->SetTitleSize(0.07);
+	signals.at(0)->GetYaxis()->SetTitleOffset(1.35);
+	TString yTitle = "Density";
+	signals.at(0)->GetYaxis()->SetTitle(yTitle);
+
+	// draw signal samples overlayed
+	for (unsigned s = 0; s < signals.size(); s++){
+		signals.at(s)->SetFillStyle(0);
+		signals.at(s)->SetLineStyle(s+1);
+		signals.at(s)->SetLineWidth(3);
+		signals.at(s)->SetLineColor(signals.at(s)->GetFillColor());
+		if (s == 0) signals.at(s)->Draw("Hist");
+		else		signals.at(s)->Draw("Histsame");
+
+		std::cout << "Sample " << s << ": Mean " << signals.at(s)->GetMean()
+				<< ", Sigma " << signals.at(s)->GetRMS()
+				<< ", rel. RMS " << signals.at(s)->GetRMS()/signals.at(s)->GetMean() << std::endl;
+	}
+
+	TLegend* legend = createLegendShapeComparison(signals,samples, plot);
+	legend->Draw("same");
+	can->RedrawAxis();
+
+	savePlot(can, plot.identifier+"_ShapeComparison");
+}
+
 void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> samples){
 	if(verbose) std::cout << "--> drawPlot(configInfo, plotInfo, TH1D*, vector<sample>, TString)" << std::endl;
+
+	if(plot.compareShapes){
+		drawShapeComparison(conf, plot, samples);
+		return;
+	}
 
 	// Set tick marks on all 4 sides of pad
 	gStyle->SetPadTickX(1);
