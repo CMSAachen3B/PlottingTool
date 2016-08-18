@@ -37,6 +37,7 @@ void plotPostfitShapes(TString inputFile = "") {
 	cmsText = "";
 	writeExtraText = false;
 	gStyle->SetOptStat(0);
+	TGaxis::SetMaxDigits(3);
 
 	// Set tick marks on all 4 sides of pad
 	gStyle->SetPadTickX(1);
