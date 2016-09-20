@@ -116,76 +116,144 @@ std::vector<sample> defineSamples(){
 	return samples;
 }
 
-
 // define which plots to draw
 // look at plotInfo.h to see which constructors exist
+
 std::vector<plotInfo> definePlots(){
 	std::vector<plotInfo> plots;
 
-	int sigScale = 50;
-	int logSigScale = 50;
+	// plots using full inclusive selection
+	if (infile == "/net/scratch_cms/institut_3b/kargoll/workdirInclusive3ProngAug_05_2016/LOCAL_COMBINED_inclusive_default_LumiScaled.root"){
+		int sigScale = 50;
+		int logSigScale = 50;
 
-	plotInfo mt("Cut_10_Nminus1_MT_", "GeV", false, 2, 0., 140.);
-	mt.scaleSignal = 100;
-	plots.push_back( mt );
+		plotInfo mt("Cut_10_Nminus1_MT_", "GeV", false, 2, 0., 140.);
+		mt.scaleSignal = 100;
+		plots.push_back( mt );
 
-	plotInfo tauSelPt("TauSelPt", "GeV", true, 2, 20, 100);
-	tauSelPt.xAxisLabel = "p_{T}(#tau_{h})/GeV";
-	tauSelPt.scaleSignal = logSigScale;
-	plots.push_back( tauSelPt );
+		plotInfo tauSelPt("TauSelPt", "GeV", true, 2, 20, 100);
+		tauSelPt.xAxisLabel = "p_{T}(#tau_{h})/GeV";
+		tauSelPt.scaleSignal = logSigScale;
+		plots.push_back( tauSelPt );
 
-	plotInfo tauSelEta("TauSelEta", "", false, 2, -2.3, 2.3);
-	tauSelEta.xAxisLabel = "#eta(#tau_{h})";
-	tauSelEta.scaleSignal = sigScale;
-	plots.push_back( tauSelEta );
+		plotInfo tauSelEta("TauSelEta", "", false, 2, -2.3, 2.3);
+		tauSelEta.xAxisLabel = "#eta(#tau_{h})";
+		tauSelEta.scaleSignal = sigScale;
+		plots.push_back( tauSelEta );
 
-	plotInfo muSelPt("MuSelPt", "GeV", true, 2, 20, 100);
-	muSelPt.yRangeHigh = 2e6;
-	muSelPt.yRangeLow = 5;
-	muSelPt.xAxisLabel = "p_{T}(#mu)/GeV";
-	muSelPt.scaleSignal = logSigScale;
-	plots.push_back( muSelPt );
+		plotInfo muSelPt("MuSelPt", "GeV", true, 2, 20, 100);
+		muSelPt.yRangeHigh = 2e6;
+		muSelPt.yRangeLow = 5;
+		muSelPt.xAxisLabel = "p_{T}(#mu)/GeV";
+		muSelPt.scaleSignal = logSigScale;
+		plots.push_back( muSelPt );
 
-	plotInfo muSelEta("MuSelEta", "", false, 2, -2.1, 2.1);
-	muSelEta.legOnTop = true;
-	muSelEta.xAxisLabel = "#eta(#mu)";
-	muSelEta.scaleSignal = 10;
-	muSelEta.scaleSignal = sigScale;
-	plots.push_back( muSelEta );
+		plotInfo muSelEta("MuSelEta", "", false, 2, -2.1, 2.1);
+		muSelEta.legOnTop = true;
+		muSelEta.xAxisLabel = "#eta(#mu)";
+		muSelEta.scaleSignal = 10;
+		muSelEta.scaleSignal = sigScale;
+		plots.push_back( muSelEta );
 
-	plotInfo metPt("MetPt", "GeV", true, 2);
-	metPt.scaleSignal = logSigScale;
-	plots.push_back( metPt );
+		plotInfo metPt("MetPt", "GeV", true, 2);
+		metPt.scaleSignal = logSigScale;
+		plots.push_back( metPt );
 
-	plotInfo metPhi("MetPhi", "GeV", false, 2);
-	metPhi.scaleSignal = sigScale;
-	plots.push_back( metPhi );
+		plotInfo metPhi("MetPhi", "GeV", false, 2);
+		metPhi.scaleSignal = sigScale;
+		plots.push_back( metPhi );
 
-	plotInfo visibleMass("visibleMass", "GeV", false, 2, 0., 140.);
-	visibleMass.scaleSignal = sigScale;
-	plots.push_back( visibleMass );
+		plotInfo visibleMass("visibleMass", "GeV", false, 2, 0., 140.);
+		visibleMass.scaleSignal = sigScale;
+		plots.push_back( visibleMass );
 
-	plotInfo nJetsId("NJetsId", "", true, 1, -0.5, 7.5);
-	nJetsId.scaleSignal = logSigScale;
-	plots.push_back( nJetsId );
+		plotInfo nJetsId("NJetsId", "", true, 1, -0.5, 7.5);
+		nJetsId.scaleSignal = logSigScale;
+		plots.push_back( nJetsId );
 
-	plotInfo jetsDEta("JetsDEta", "", false, 4, -8.0, 8.0);
-	jetsDEta.xAxisLabel = "#Delta#eta_{jj}";
-	jetsDEta.scaleSignal = sigScale;
-	plots.push_back( jetsDEta );
+		plotInfo jetsDEta("JetsDEta", "", false, 4, -8.0, 8.0);
+		jetsDEta.xAxisLabel = "#Delta#eta_{jj}";
+		jetsDEta.scaleSignal = sigScale;
+		plots.push_back( jetsDEta );
 
-	plotInfo jetsInvM("JetsInvM", "GeV", true, 2, 0, 1400);
-	jetsInvM.xAxisLabel = "m_{jj}/GeV";
-	jetsInvM.scaleSignal = logSigScale;
-	plots.push_back( jetsInvM );
+		plotInfo jetsInvM("JetsInvM", "GeV", true, 2, 0, 1400);
+		jetsInvM.xAxisLabel = "m_{jj}/GeV";
+		jetsInvM.scaleSignal = logSigScale;
+		plots.push_back( jetsInvM );
 
-	plotInfo higgsPt("HiggsPt", "GeV", true, 2);
-	higgsPt.xAxisLabel = "p_{T}^{#tau#tau}/GeV";
-	higgsPt.scaleSignal = logSigScale;
-	plots.push_back( higgsPt );
+		plotInfo higgsPt("HiggsPt", "GeV", true, 2);
+		higgsPt.xAxisLabel = "p_{T}^{#tau#tau}/GeV";
+		higgsPt.scaleSignal = logSigScale;
+		plots.push_back( higgsPt );
 
+		plotInfo flightLengthSig("Tau3p_FlightLengthSignificance", "", true, 1, -11, 23);
+		flightLengthSig.xAxisLabel = "f / #sigma_{f}";
+		flightLengthSig.scaleSignal = 100;
+		flightLengthSig.drawSOverSB = true;
+		plots.push_back( flightLengthSig );
+	}
+	// plots using 3prong only + flight length cut; inclusive selection
+	else if(infile == "/net/scratch_cms/institut_3b/kargoll/workdirInclusive_3ProngOnlyAug_16_2016/Results_3Prong_FlightLength/LOCAL_COMBINED_inclusive_default_LumiScaled.root"){
+
+		plotInfo rotationSig("Tau3p_Zero_RotSignificance", "", true, 4);//, 0., 6.);
+		rotationSig.xAxisLabel = "r / #sigma_{r}";
+		rotationSig.scaleSignal = 50;
+		plots.push_back( rotationSig );
+
+		plotInfo tau3PMinusE("Tau3p_Minus_E", "GeV", false, 2);
+		tau3PMinusE.xAxisLabel = "E(#tau_{-})/GeV";
+		tau3PMinusE.hideSignal = true;
+		plots.push_back(tau3PMinusE);
+
+		plotInfo tau3PPlusE("Tau3p_Plus_E", "GeV", false, 2);
+		tau3PPlusE.xAxisLabel = "E(#tau_{+})/GeV";
+		tau3PPlusE.hideSignal = true;
+		plots.push_back(tau3PPlusE);
+
+		plotInfo tau3PMinusEta("Tau3p_Minus_Eta", "", false, 2, -2.3, 2.3);
+		tau3PMinusEta.xAxisLabel = "#eta(#tau_{+/-})";
+		tau3PMinusEta.hideSignal = true;
+		plots.push_back(tau3PMinusEta);
+
+		plotInfo tau3PMinusPhi("Tau3p_Minus_Phi", "", false, 2);
+		tau3PMinusPhi.xAxisLabel = "#varphi(#tau_{+/-})";
+		tau3PMinusPhi.hideSignal = true;
+		plots.push_back(tau3PMinusPhi);
+
+		plotInfo tau3PZeroE("Tau3p_Zero_E", "GeV", false, 2);
+		tau3PZeroE.xAxisLabel = "E(#tau_{0})/GeV";
+		tau3PZeroE.hideSignal = true;
+		plots.push_back(tau3PZeroE);
+
+		plotInfo tau3PZeroEta("Tau3p_Zero_Eta", "", false, 2, -2.3, 2.3);
+		tau3PZeroEta.xAxisLabel = "#eta(#tau_{0})";
+		tau3PZeroEta.hideSignal = true;
+		plots.push_back(tau3PZeroEta);
+
+		plotInfo tau3PZeroPhi("Tau3p_Zero_Phi", "", false, 2);
+		tau3PZeroPhi.xAxisLabel = "#varphi(#tau_{0})";
+		tau3PZeroPhi.hideSignal = true;
+		plots.push_back(tau3PZeroPhi);
+	}
+	// 3prong svfit mass plots
+	else if(infile == "/net/scratch_cms/institut_3b/kargoll/workdirInclusive_3ProngOnly_SVFitAug_24_2016/LOCAL_COMBINED_zerojet3prong_default_LumiScaled.root"){
+
+		plotInfo svFit3pMinus("svFit3pMass_MinusSol", "GeV", false, 4, 0., 350.);
+		svFit3pMinus.xAxisLabel = "m_{#tau#tau}^{3#pi}/GeV";
+		svFit3pMinus.scaleSignal = 100;
+		plots.push_back(svFit3pMinus);
+
+		plotInfo svFit3pPlus("svFit3pMass_PlusSol", "GeV", false, 4, 0., 350.);
+		svFit3pPlus.xAxisLabel = "m_{#tau#tau}^{3#pi}/GeV";
+		svFit3pPlus.scaleSignal = 100;
+		plots.push_back(svFit3pPlus);
+
+		plotInfo svFit3pZero("svFit3pMass_ZeroSol", "GeV", false, 4, 0., 350.);
+		svFit3pZero.xAxisLabel = "m_{#tau#tau}^{3#pi}/GeV";
+		svFit3pZero.scaleSignal = 100;
+		plots.push_back(svFit3pZero);
+	}
 	return plots;
 }
-
 
 #endif

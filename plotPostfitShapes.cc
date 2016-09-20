@@ -28,7 +28,9 @@ TString folder = "htt_mt_<bin>_8TeV_postfit/";
 void plotPostfitShapes(TString inputFile = "") {
 	// set input root file
 	if (inputFile == "")
-		inputFile = "/home/home2/institut_3b/kargoll/TauAnalysis/LimitSetting/CMSSW_7_1_5/src/CombineHarvester/CombineTools/bin/output/aachen_cards/mt/125/htt_mt_125_shapes.root";
+		//inputFile = "/home/home2/institut_3b/kargoll/TauAnalysis/LimitSetting/CMSSW_7_1_5/src/CombineHarvester/CombineTools/bin/output/aachen3ProngFlightLengths_cards/onlyHighStatCats/mt/125/htt_mt_125_shapes.root";
+		inputFile = "/home/home2/institut_3b/kargoll/TauAnalysis/LimitSetting/CMSSW_7_1_5/src/CombineHarvester/CombineTools/bin/output/aachen3Prong_cards/onlyHighStatCats/mt/125/htt_mt_125_shapes.root";
+		//inputFile = "/home/home2/institut_3b/kargoll/TauAnalysis/LimitSetting/CMSSW_7_1_5/src/CombineHarvester/CombineTools/bin/output/aachen_cards/mt/125/htt_mt_125_shapes.root";
 	TFile* inFile = new TFile(inputFile, "READ");
 
 	//gROOT->LoadMacro("tdrstyle.C");
@@ -61,14 +63,15 @@ void plotPostfitShapes(TString inputFile = "") {
 
 	std::map<int, TString> catNames;
 	catNames[1] = "0-jet low-p_{T}(#tau_{h})";
-	catNames[2] = "0-jet high-p_{T}(#tau_{h})";
+	//catNames[2] = "0-jet high-p_{T}(#tau_{h})";
 	catNames[3] = "1-jet low-p_{T}(#tau_{h})";
 	catNames[4] = "1-jet high-p_{T}(#tau_{h})";
-	catNames[5] = "1-jet boosted";
-	catNames[6] = "loose VBF";
-	catNames[7] = "tight VBF";
+	//catNames[5] = "1-jet boosted";
+	//catNames[6] = "loose VBF";
+	//catNames[7] = "tight VBF";
 
 	for (int bin = 1; bin <= 7; bin++) {
+		if(catNames.find(bin) == catNames.end()) continue;
 		// read histograms from input file
 		TString hName = folder;
 		hName.ReplaceAll("<bin>", TString::Itoa(bin, 10));
@@ -279,7 +282,7 @@ void plotPostfitShapes(TString inputFile = "") {
 		//latex.SetTextSize(lumiTextSize*t);
 		latex.DrawLatex(0.68, 0.3, catNames[bin]);
 
-		TString fileName = "PostfitShape_bin" + TString::Itoa(bin, 10);
+		TString fileName = "PostfitShape_3prong_bin" + TString::Itoa(bin, 10);
 		savePlot(can, fileName, true);
 
 	}

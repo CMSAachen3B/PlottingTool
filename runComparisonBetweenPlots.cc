@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////
 //
-// runShapeComparison.cc: main macro to run in ROOT
-// call like "root runShapeComparison.cc+" in your shell
+// runComparisonBetweenPlots.cc: main macro to run in ROOT
+// call like "root runComparisonBetweenPlots.cc+" in your shell
 //
 /////////////////////////////////////////////////
 
@@ -19,11 +19,10 @@
 #include "CMS_lumi.C"
 
 #include "userConfig.h"
-//#include "defineSVFitMassComparison.h"
-#include "define3ProngQualityCutsShapeComparison.h"
+#include "define3ProngResolutionComparison.h"
 #include "plottingHelpers.h"
 
-void runShapeComparison(){
+void runComparisonBetweenPlots(){
 	if(verbose) std::cout << "--> plotting()" << std::endl;
 	gROOT->LoadMacro("tdrstyle.C");
 	setTDRStyle();
@@ -34,21 +33,20 @@ void runShapeComparison(){
 	TGaxis::SetMaxDigits(3);
 
 	// define which samples to use
-	std::vector<sample> samples = defineCompSamples();
+	sample sam = defineSample();
 
 	// define which plots to draw
-	std::vector<plotInfo> plots = defineCompPlots();
+	std::vector< std::vector<plotInfo> > plots = defineComparisonPlots();
 
 	// test validity of structs
-	testInputs(conf, samples, plots);
+	std::vector<sample> samInVector;
+	samInVector.push_back(sam);
+	for (unsigned p = 0; p< plots.size(); p++)
+		testInputs(conf, samInVector, plots.at(p));
 	
-	// dummy datahists
-	TH1D* datahist = 0;
-
 	// create plots
-
 	for(unsigned p = 0; p < plots.size(); p++){
-		drawPlot(conf, plots.at(p), datahist, samples);
+		drawPlotComparison(conf, plots.at(p), sam);
 	}
 
 	std::cout << "Plots created." << std::endl;

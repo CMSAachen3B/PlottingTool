@@ -12,6 +12,9 @@
 #include "TMath.h"
 #include "THStack.h"
 #include "TSystem.h"
+#include "TGraph.h"
+#include "TFrame.h"
+#include "TMarker.h"
 
 // include struct definitions
 #include "sample.h"
@@ -22,6 +25,29 @@
 // some global settings
 int errorBandFillStyle = 3013;
 int errorBandColor = kGray + 2;
+
+// === some useful color definitions ===
+// htautau colors
+int col_htt_qcd = TColor::GetColor(250,202,255);
+int col_htt_W = TColor::GetColor(222,90,106);
+int col_htt_ZJ = TColor::GetColor(222,90,106);
+int col_htt_tt = TColor::GetColor(155,152,204);
+int col_htt_Ztt = TColor::GetColor(248,206,104);
+
+// RWTH colors
+// http://www9.rwth-aachen.de/global/show_document.asp?id=aaaaaaaaaadpbhq
+int col_rwth_darkblue	= TColor::GetColor(0,84,159);
+int col_rwth_lightblue	= TColor::GetColor(142,186,229);
+int col_rwth_magenta	= TColor::GetColor(227,0,102);
+int col_rwth_yellow		= TColor::GetColor(255,237,0);
+int col_rwth_petrol		= TColor::GetColor(0,97,101);
+int col_rwth_turquoise	= TColor::GetColor(0,152,161);
+int col_rwth_green		= TColor::GetColor(87,171,39);
+int col_rwth_maygreen	= TColor::GetColor(189,205,0);
+int col_rwth_orange		= TColor::GetColor(246,168,0);
+int col_rwth_red		= TColor::GetColor(204,7,30);
+int col_rwth_violett	= TColor::GetColor(97,33,88);
+int col_rwth_purple		= TColor::GetColor(122,111,172);
 
 // test definiton of structs
 void testInputs(configInfo config, std::vector<sample> samples, std::vector<plotInfo> plots){
@@ -91,7 +117,7 @@ TH1D* getDataMC(TH1D* datahist, std::vector<TH1D*> MChists){
 	TString name = (TString)datahist->GetName()+"_MCRatio";
 	TH1D* hist = new TH1D(name.Data(),";;Data/MC",nbins,xlow,xhigh);
 
-	for(int i=1;i<=nbins;i++){
+	for(int i=0;i<=nbins+1;i++){
 		double data = datahist->GetBinContent(i);
 		double dataerror = datahist->GetBinError(i);
 		double mc = 0;
@@ -157,7 +183,7 @@ TH1D* getHistoFromSample(configInfo conf, plotInfo p, sample s){
 	for(unsigned ss = 0; ss < s.identifier.size(); ss++){
 		TH1D* hist = getHisto(conf, p.identifier + s.identifier.at(ss), s.mcScale.at(ss), s.color);
 		// add systematic uncertainty to stat. unc.
-		for(int i=1;i<hist->GetNbinsX();i++){
+		for(int i=0;i<hist->GetNbinsX()+1;i++){
 			hist->SetBinError(i,TMath::Sqrt(TMath::Power(hist->GetBinError(i),2)+TMath::Power(s.syst.at(ss)*hist->GetBinContent(i),2)));
 		}
 		histo->Add(hist);
@@ -249,11 +275,13 @@ TLegend* createLegend(TH1D* data, TH1D* total, std::vector<TH1D*> backgrounds, s
 	for(int i=backgrounds.size()-1;i>=0;i--){
 		legend->AddEntry(backgrounds.at(i),samples.at(i).legName,"F");
 	}
-	for(int i=signals.size()-1;i>=0;i--){
-		int i_sample = i + backgrounds.size();
-		TString label = samples.at(i_sample).legName;
-		if(plot.scaleSignal != 1) label = label +  " x" + TString::Itoa(plot.scaleSignal, 10);
-		legend->AddEntry(signals.at(i),label,"l");
+	if(!plot.hideSignal){
+		for(int i=signals.size()-1;i>=0;i--){
+			int i_sample = i + backgrounds.size();
+			TString label = samples.at(i_sample).legName;
+			if(plot.scaleSignal != 1) label = label +  " x" + TString::Itoa(plot.scaleSignal, 10);
+			legend->AddEntry(signals.at(i),label,"l");
+		}
 	}
 	return legend;
 }
@@ -263,7 +291,8 @@ TLegend* createLegendShapeComparison(std::vector<TH1D*> signals, std::vector<sam
 
 	TLegend* legend = 0;
 	if (plot.legOnTop){
-		legend = new TLegend(0.2, 0.80, 0.9, 0.87);
+		double offset = (signals.size() < 3) ? 0.0 : 0.035;
+		legend = new TLegend(0.2, 0.8 - offset, 0.9, 0.87 + offset);
 		legend->SetNColumns(2);
 	}
 	else {
@@ -397,16 +426,20 @@ void drawShapeComparison(configInfo conf, plotInfo plot, std::vector<sample> sam
 	// read histograms from input file
 	std::vector<TH1D*> signals = getHistos(conf, plot, samples, true);
 
+	//get correct xAxis range
+	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : signals.at(0)->GetXaxis()->GetXmin();
+	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : signals.at(0)->GetXaxis()->GetXmax();
+
+	for (unsigned s = 0; s < signals.size(); s++){
+		signals.at(s)->GetXaxis()->SetRangeUser(xLow, xHigh);
+	}
+
 	// scale to unity
 	double max = 0;
 	for (unsigned sig = 0; sig < signals.size(); sig++){
 		signals.at(sig)->Scale(1. / signals.at(sig)->Integral());
 		if (signals.at(sig)->GetMaximum() > max) max = signals.at(sig)->GetMaximum();
 	}
-
-	//get correct xAxis range
-	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : signals.at(0)->GetXaxis()->GetXmin();
-	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : signals.at(0)->GetXaxis()->GetXmax();
 
 	TCanvas* can = new TCanvas();
 
@@ -451,7 +484,8 @@ void drawShapeComparison(configInfo conf, plotInfo plot, std::vector<sample> sam
 	// draw signal samples overlayed
 	for (unsigned s = 0; s < signals.size(); s++){
 		signals.at(s)->SetFillStyle(0);
-		signals.at(s)->SetLineStyle(s+1);
+		int style = int((s+2)/2); // use the same linestyle for 2 histograms :-D
+		signals.at(s)->SetLineStyle(style);
 		signals.at(s)->SetLineWidth(3);
 		signals.at(s)->SetLineColor(signals.at(s)->GetFillColor());
 		if (s == 0) signals.at(s)->Draw("Hist");
@@ -469,6 +503,137 @@ void drawShapeComparison(configInfo conf, plotInfo plot, std::vector<sample> sam
 	savePlot(can, plot.identifier+"_ShapeComparison");
 }
 
+void drawSOverSB(plotInfo plot, std::vector<TH1D*> signals, std::vector<TH1D*> backgrounds){
+	if(verbose) std::cout << "--> drawSOverSB(plotInfo, std::vector<TH1D*>, std::vector<TH1D*>)" << std::endl;
+
+	TCanvas* can = new TCanvas();
+	TPad *pad = new TPad("pad","",0,0,1,1);
+	pad->SetRightMargin(0.16);
+	pad->SetLeftMargin(0.16);
+	pad->SetTopMargin(0.2);
+	pad->SetTicky(0);
+	pad->Draw();
+	pad->cd();
+
+	TH1F* hr = pad->DrawFrame(-7.9, -0.1, 14.1, 1.1);
+	hr->SetXTitle("Cut on " + plot.xAxisLabel);
+	hr->SetYTitle("efficiency #varepsilon");
+	hr->GetYaxis()->SetTitleOffset(1.2);
+	hr->GetYaxis()->SetTitleSize(0.05);
+	hr->GetYaxis()->SetLabelSize(0.04);
+	hr->GetXaxis()->SetTitleSize(0.05);
+	hr->GetXaxis()->SetLabelSize(0.04);
+	hr->GetXaxis()->SetNdivisions(7, 5, 0, true);
+	pad->GetFrame()->SetFillColor(21);
+	pad->GetFrame()->SetBorderSize(12);
+
+	TH1D* sig = (TH1D*) signals.at(0)->Clone(plot.identifier+"_totalSignal");
+	for (unsigned i=1; i<signals.size(); i++) sig->Add(signals.at(i));
+	TH1D* bkg = (TH1D*) backgrounds.at(0)->Clone(plot.identifier+"_totalBkg");
+	for (unsigned i=1; i<backgrounds.size(); i++) bkg->Add(backgrounds.at(i));
+	TH1D* qcd = 0;
+	for (unsigned i=0; i<backgrounds.size(); i++){
+		if(  TString(backgrounds.at(i)->GetTitle()).Contains("QCD")){
+			cout << "Found QCD histo" << endl;
+			qcd = backgrounds.at(i);
+		}
+	}
+
+	int nBins = signals.at(0)->GetNbinsX();
+	TGraph* soversb = new TGraph(nBins);
+	TGraph* seff = new TGraph(nBins);
+	TGraph* qcdeff = new TGraph(nBins);
+	double totalS = sig->Integral(0, nBins+1);
+	double totalQCD = qcd->Integral(0, nBins+1);
+	cout << "       cutvalue: s/(s+b)   eff(s)    eff(qcd)" << endl;
+	for (int bin = 0; bin < nBins; bin++){
+		double s = sig->Integral(bin, nBins+1);
+		double b = bkg->Integral(bin, nBins+1);
+		double q = qcd->Integral(bin, nBins+1);
+		soversb->SetPoint(bin, signals.at(0)->GetBinLowEdge(bin), s / (s+b));
+		seff->SetPoint(bin, signals.at(0)->GetBinLowEdge(bin), s/totalS);
+		qcdeff->SetPoint(bin, qcd->GetBinLowEdge(bin), q/totalQCD);
+
+		cout << "Cut at " << signals.at(0)->GetBinLowEdge(bin) << ": " << s / (s+b) << "  " << s/totalS << "  " << q/totalQCD << endl;
+	}
+
+	int color = kBlack;
+	hr->GetYaxis()->SetTitleColor(color);
+	hr->GetYaxis()->SetAxisColor(color);
+	hr->GetYaxis()->SetLabelColor(color);
+
+	color = TColor::GetColor(0,84,159); // rwth dark blue
+	seff->SetLineColor(color);
+	seff->SetMarkerColor(color);
+	seff->SetMarkerStyle(20);
+	seff->Draw("LP");
+
+	color = TColor::GetColor(142,186,229); // rwth light blue
+	qcdeff->SetLineColor(color);
+	qcdeff->SetMarkerColor(color);
+	qcdeff->SetMarkerStyle(21);
+	qcdeff->Draw("LP");
+
+	pad->RedrawAxis();
+
+	//create a transparent pad drawn on top of the main pad
+	can->cd();
+	TPad *overlay = new TPad("overlay","",0,0,1,1);
+	overlay->SetTickx(0);
+	overlay->SetTicky(1);
+	overlay->SetRightMargin(0.16);
+	overlay->SetLeftMargin(0.16);
+	overlay->SetTopMargin(0.2);
+	//overlay->SetBottomMargin(0.16);
+	overlay->SetFillStyle(4000);
+	overlay->SetFillColor(0);
+	overlay->SetFrameFillStyle(4000);
+	overlay->Draw();
+	overlay->cd();
+	double xmin = pad->GetUxmin();
+	double ymin = 1.6E-3;
+	double xmax = pad->GetUxmax();
+	double ymax = 3.7E-3;
+	TH1F *hframe = overlay->DrawFrame(xmin,ymin,xmax,ymax);
+	hframe->GetXaxis()->SetLabelOffset(99);
+	hframe->GetXaxis()->SetTickLength(0);
+	hframe->GetYaxis()->SetLabelOffset(99);
+	hframe->GetYaxis()->SetTickLength(0);
+
+	color = TColor::GetColor(204,7,30); // rwth red
+	soversb->SetLineColor(color);
+	soversb->SetMarkerColor(color);
+	soversb->SetMarkerStyle(22);
+	soversb->Draw("LP");
+
+	//Draw an axis on the right side
+	TGaxis *axis = new TGaxis(xmax,ymin,xmax, ymax,ymin,ymax,510,"+L");
+	//axis->SetLineColor(color);
+	//axis->SetLabelColor(color);
+	//axis->SetTitleColor(color);
+	axis->SetTitle("S/(S+B)");
+	axis->SetLabelFont(42);
+	axis->SetTitleFont(42);
+	axis->SetTitleSize(0.05);
+	axis->SetTitleOffset(1.2);
+	axis->SetLabelSize(0.04);
+	axis->SetNdivisions(505);
+	axis->Draw();
+
+	TLegend* leg = new TLegend(0.2, 0.83, 0.8, 0.87);
+	leg->SetNColumns(3);
+	leg->SetFillColor(0);
+	leg->SetBorderSize(0);
+	leg->SetFillStyle(0);
+	leg->AddEntry(seff, "#varepsilon(Signal)", "pl");
+	leg->AddEntry(qcdeff, "#varepsilon(QCD)", "pl");
+	leg->AddEntry(soversb, "S/(S+B)", "pl");
+	leg->Draw();
+
+	can->SetWindowSize(800,800);
+	savePlot(can, plot.identifier + "_SoverSB");
+}
+
 void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> samples){
 	if(verbose) std::cout << "--> drawPlot(configInfo, plotInfo, TH1D*, vector<sample>, TString)" << std::endl;
 
@@ -483,9 +648,23 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	gStyle->SetPalette(1);
 	gROOT->ForceStyle(true);
 
+	//get correct xAxis range
+	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : data->GetXaxis()->GetXmin();
+	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : data->GetXaxis()->GetXmax();
+
 	// read histograms from input file
 	std::vector<TH1D*> backgrounds = getHistos(conf, plot, samples, false);
 	std::vector<TH1D*> signals = getHistos(conf, plot, samples, true);
+
+	// need to set range of all histos so that under-/overflow bins work properly
+	for (unsigned b = 0; b < backgrounds.size(); b++){
+		backgrounds.at(b)->GetXaxis()->SetRangeUser(xLow, xHigh);
+	}
+	for (unsigned s = 0; s < signals.size(); s++){
+		signals.at(s)->GetXaxis()->SetRangeUser(xLow, xHigh);
+	}
+
+	if(plot.drawSOverSB) drawSOverSB(plot, signals, backgrounds);
 
 	if (plot.normByBinWidth){
 		normToBinWidth(data);
@@ -494,10 +673,6 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	}
 
 	TH1D* ratio = getDataMC(data,backgrounds);
-
-	//get correct xAxis range
-	double xLow = (plot.xRangeLow != -9.9) ? plot.xRangeLow : data->GetXaxis()->GetXmin();
-	double xHigh = (plot.xRangeHigh != -9.9) ? plot.xRangeHigh : data->GetXaxis()->GetXmax();
 
 	TCanvas* can = new TCanvas();
 	THStack* stack = produceHistStack(backgrounds);
@@ -556,13 +731,15 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	total->Draw("E2same");
 
 	// draw signal samples overlayed
-	for (unsigned s = 0; s < signals.size(); s++){
-		signals.at(s)->SetFillStyle(0);
-		signals.at(s)->SetLineStyle(7);
-		signals.at(s)->SetLineWidth(3);
-		signals.at(s)->SetLineColor(signals.at(s)->GetFillColor());
-		signals.at(s)->Scale(plot.scaleSignal);
-		signals.at(s)->Draw("Histsame");
+	if(!plot.hideSignal){
+		for (unsigned s = 0; s < signals.size(); s++){
+			signals.at(s)->SetFillStyle(0);
+			signals.at(s)->SetLineStyle(7);
+			signals.at(s)->SetLineWidth(3);
+			signals.at(s)->SetLineColor(signals.at(s)->GetFillColor());
+			signals.at(s)->Scale(plot.scaleSignal);
+			signals.at(s)->Draw("Histsame");
+		}
 	}
 
 	data->Draw("Esame");
@@ -574,10 +751,11 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	// draw data-MC ratio plot
 	can->cd();
 	TH1D* ratioband = (TH1D*) total->Clone(plot.identifier + "_ratioband");
-	for(int i=1;i<=ratioband->GetNbinsX();i++){
+	for(int i=0;i<=ratioband->GetNbinsX()+1;i++){
 		ratioband->SetBinContent(i,1);
 		ratioband->SetBinError(i,total->GetBinError(i)/total->GetBinContent(i));
 	}
+	ratioband->GetXaxis()->SetRangeUser(xLow, xHigh);
 	ratioband->SetFillStyle(errorBandFillStyle);
 	ratioband->SetFillColor(errorBandColor);
 	ratioband->SetLineColor(18);
@@ -623,6 +801,121 @@ void drawPlot(configInfo conf, plotInfo plot, TH1D* data, std::vector<sample> sa
 	CMS_lumi(Pad1,2,0);
 	
 	savePlot(can, plot.identifier);
+}
+
+// function to create plot that compares different variables
+// obtained from the same sample
+void drawPlotComparison(configInfo conf, std::vector<plotInfo> plots, sample sam){
+	if(verbose) std::cout << "--> drawPlotComparison(configInfo std::vector<plotInfo>, samples)" << std::endl;
+
+	// Set tick marks on all 4 sides of pad
+	gStyle->SetPadTickX(1);
+	gStyle->SetPadTickY(1);
+	gStyle->SetPalette(1);
+	gROOT->ForceStyle(true);
+
+	// get style info from first plot in vector
+	plotInfo p1 = plots.at(0);
+
+	double xLow(0), xHigh(0);
+
+	// read histograms from input file
+	std::vector<TH1D*> histos;
+	double max = 0;
+	for (unsigned p = 0; p < plots.size(); p++){
+		histos.push_back( getHistoFromSample(conf, plots.at(p), sam) );
+		if (p == 0){
+			//get correct xAxis range
+			xLow = (p1.xRangeLow != -9.9) ? p1.xRangeLow : histos.at(p)->GetXaxis()->GetXmin();
+			xHigh = (p1.xRangeHigh != -9.9) ? p1.xRangeHigh : histos.at(p)->GetXaxis()->GetXmax();
+		}
+		histos.at(p)->GetXaxis()->SetRangeUser(xLow, xHigh);
+		histos.at(p)->Scale(1. / histos.at(p)->Integral());
+		if (histos.at(p)->GetMaximum() > max) max = histos.at(p)->GetMaximum();
+	}
+
+	TCanvas* can = new TCanvas();
+
+	double yAxisScaleFactor = 1.5; // for linear y-axis
+	if(p1.log){
+		can->SetLogy();
+		yAxisScaleFactor = 100; // for log y-axis
+	}
+
+	can->Draw();
+	can->cd();
+
+	if (p1.yRangeHigh >= 0){
+		histos.at(0)->SetMaximum(p1.yRangeHigh);
+	}
+	else {
+		histos.at(0)->SetMaximum(max*1.3);
+	}
+
+	if (p1.yRangeLow >= 0){
+		histos.at(0)->SetMinimum(p1.yRangeLow);
+	}
+	else {
+		if(!p1.log) histos.at(0)->SetMinimum(0.0001);
+	}
+
+	if (p1.xAxisLabel != "default") histos.at(0)->GetXaxis()->SetTitle(p1.xAxisLabel);
+	histos.at(0)->GetXaxis()->SetTitleSize(0.05);
+	histos.at(0)->GetXaxis()->SetTitleOffset(1.1);
+	histos.at(0)->GetXaxis()->SetLabelSize(0.045);
+	//signals.at(0)->GetXaxis()->SetTickLength(0.075);
+	histos.at(0)->GetXaxis()->SetRangeUser(xLow, xHigh);
+	histos.at(0)->GetXaxis()->SetNoExponent(true);
+	histos.at(0)->GetYaxis()->SetLabelSize(0.045);
+	histos.at(0)->GetYaxis()->SetTitleSize(0.05);
+	histos.at(0)->GetYaxis()->SetTitleOffset(1.5);
+	TString yTitle = "Density";
+	histos.at(0)->GetYaxis()->SetTitle(yTitle);
+
+	TLegend* legend = new TLegend(0.2, 0.77, 0.9, 0.92);
+	legend->SetNColumns(2);
+	legend->SetFillColor(0);
+	legend->SetBorderSize(0);
+	legend->SetFillStyle(0);
+
+	// draw histograms samples overlayed
+	for (unsigned h = 0; h < histos.size(); h++){
+		histos.at(h)->SetFillStyle(0);
+		histos.at(h)->SetLineStyle(1);
+		histos.at(h)->SetLineWidth(3);
+		TString name = "";
+		if (plots.at(h).identifier.Contains("Minus")){
+			histos.at(h)->SetLineColor(col_rwth_darkblue);
+			name = "- solution";
+		}
+		else if (plots.at(h).identifier.Contains("Plus")){
+			histos.at(h)->SetLineColor(col_rwth_lightblue);
+			name = "+ solution";
+		}
+		else if (plots.at(h).identifier.Contains("True")){
+			histos.at(h)->SetLineColor(col_rwth_green);
+			histos.at(h)->SetLineStyle(2);
+			name = "true +/- solution";
+		}
+		else if (plots.at(h).identifier.Contains("Zero")){
+			histos.at(h)->SetLineColor(col_rwth_orange);
+			name = "0 solution";
+		}
+
+		if (h == 0) histos.at(h)->Draw("Hist");
+		else		histos.at(h)->Draw("Histsame");
+
+		legend->AddEntry(histos.at(h),name,"l");
+
+		std::cout << name << ": Mean " << histos.at(h)->GetMean()
+				<< ", Sigma " << histos.at(h)->GetRMS()
+				<< ", rel. RMS " << histos.at(h)->GetRMS()/histos.at(h)->GetMean() << std::endl;
+	}
+
+	legend->Draw("same");
+	can->RedrawAxis();
+
+	savePlot(can, "CompareShapes_"+sam.identifier.at(0)+p1.identifier);
 }
 
 //todo: needs more reasonable name like "drawHistoComparison". Needs adaption?
@@ -789,28 +1082,5 @@ void drawPlot(TH1D* data, std::vector<TH1D*> histos, TH1D* ratio, std::vector<TS
 	CMS_lumi(Pad1,2,0);
 }
 */
-
-// === some useful color definitions ===
-// htautau colors
-int col_htt_qcd = TColor::GetColor(250,202,255);
-int col_htt_W = TColor::GetColor(222,90,106);
-int col_htt_ZJ = TColor::GetColor(222,90,106);
-int col_htt_tt = TColor::GetColor(155,152,204);
-int col_htt_Ztt = TColor::GetColor(248,206,104);
-
-// RWTH colors
-// http://www9.rwth-aachen.de/global/show_document.asp?id=aaaaaaaaaadpbhq
-int col_rwth_darkblue	= TColor::GetColor(0,84,159);
-int col_rwth_lightblue	= TColor::GetColor(142,186,229);
-int col_rwth_magenta	= TColor::GetColor(227,0,102);
-int col_rwth_yellow		= TColor::GetColor(255,237,0);
-int col_rwth_petrol		= TColor::GetColor(0,97,101);
-int col_rwth_turquoise	= TColor::GetColor(0,152,161);
-int col_rwth_green		= TColor::GetColor(87,171,39);
-int col_rwth_maygreen	= TColor::GetColor(189,205,0);
-int col_rwth_orange		= TColor::GetColor(246,168,0);
-int col_rwth_red		= TColor::GetColor(204,7,30);
-int col_rwth_violett	= TColor::GetColor(97,33,88);
-int col_rwth_purple		= TColor::GetColor(122,111,172);
 
 #endif
